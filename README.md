@@ -36,6 +36,6 @@
 ## 🛠️ Tech Stack
 
 - **Frontend:** JS / HTML / CSS  
-- **Backend:** C# with AWS Lambda  
+- **Backend:** Python with AWS Lambda  
 - **Database:** Amazon DynamoDB  
 - **Infrastructure:** AWS Lab Environment 
