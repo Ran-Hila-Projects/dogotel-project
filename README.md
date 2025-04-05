@@ -29,7 +29,7 @@
 
 ## 🧱 Architecture
 
-![System Architecture Diagram](dogotel-front/assets/images/aws-diagram.png)
+![System Architecture Diagram](dogotel-front/assets/images/AWS.png)
 
 ---
 
