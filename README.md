@@ -29,7 +29,7 @@
 
 ## 🧱 Architecture
 
-![System Architecture Diagram](docs/architecture.png)
+![System Architecture Diagram]([docs/architecture.png](https://docs.google.com/document/d/1_4y2alae6ogr-Gkh9wuS_shr6n4R3imm64tEA1MW-Ng/edit?tab=t.0))
 
 ---
 
