@@ -21,9 +21,7 @@
 - **AWS Lambda** – Backend logic  
 - **Amazon API Gateway** – API layer  
 - **Amazon DynamoDB** – NoSQL Database for rooms, users, bookings  
-- **Amazon SES** – Email confirmation system  
-- **Amazon CloudWatch** – Logs and monitoring  
-- **AWS IAM** – Permissions and security  
+- **Amazon Step-Function** – Orders automation 
 
 ---
 
