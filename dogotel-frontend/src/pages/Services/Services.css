@@ -1,11 +1,9 @@
-.services-page {
-  padding: 40px 20px;
-}
-
 .services-header {
   text-align: center;
   margin-top: 140px;
+  position: sticky;
   margin-bottom: 100px;
+  top: 18vh;
 }
 
 .services-header h1 {
@@ -21,26 +19,59 @@
   margin: 0 auto;
 }
 
-.services-list {
-  display: flex;
-  flex-direction: column;
-  gap: 60px;
-}
-
 .services-special {
   background-color: #3b1d0f;
   color: white;
-  padding: 60px 20px;
+  padding: 100px 20px;
   text-align: center;
-  margin-top: 100px;
-  border-radius: 20px;
 }
 
 .services-special h2 {
-  font-size: 24px;
+  font-size: 33px;
   margin-bottom: 20px;
 }
 
 .services-special p {
   font-size: 16px;
+}
+
+.services-list {
+  position: relative;
+  height: 258vh;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Each card wrapper */
+.service-wrapper {
+  position: sticky;
+  top: 57%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+
+/* Make each ServiceCard have stacking */
+.service-wrapper:nth-child(1) {
+  z-index: 1;
+}
+.service-wrapper:nth-child(2) {
+  z-index: 2;
+}
+.service-wrapper:nth-child(3) {
+  z-index: 3;
+}
+.service-wrapper:nth-child(4) {
+  z-index: 4;
+}
+
+.service-wrapper {
+  transition: transform 0.5s, opacity 0.5s;
+}
+
+.up-fix {
+  margin-top: -36vh;
 }

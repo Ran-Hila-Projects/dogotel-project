@@ -1,9 +1,23 @@
 import React from "react";
 import "./ServiceCard.css";
 
-function ServiceCard({ title, text1, text2, image, emoji }) {
+function ServiceCard({
+  title,
+  text1,
+  text2,
+  image,
+  emoji,
+  isPassed,
+  isActive,
+}) {
+  const cardClass = isPassed
+    ? "service-card passed"
+    : isActive
+    ? "service-card active"
+    : "service-card";
+
   return (
-    <div className="service-card">
+    <div className={cardClass}>
       <div className="service-text">
         <h3>
           {title} {emoji}

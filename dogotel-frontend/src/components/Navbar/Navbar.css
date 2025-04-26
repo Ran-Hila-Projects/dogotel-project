@@ -1,5 +1,5 @@
 .navbar {
-  background: rgba(248, 242, 235, 0.85);
+  background: rgba(248, 242, 235, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px); /* for Safari */
   border-radius: 20px;
