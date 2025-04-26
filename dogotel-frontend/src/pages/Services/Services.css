@@ -1,0 +1,46 @@
+.services-page {
+  padding: 40px 20px;
+}
+
+.services-header {
+  text-align: center;
+  margin-top: 140px;
+  margin-bottom: 100px;
+}
+
+.services-header h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  color: #3b1d0f;
+}
+
+.services-header p {
+  font-size: 18px;
+  color: #3b1d0f;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+}
+
+.services-special {
+  background-color: #3b1d0f;
+  color: white;
+  padding: 60px 20px;
+  text-align: center;
+  margin-top: 100px;
+  border-radius: 20px;
+}
+
+.services-special h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.services-special p {
+  font-size: 16px;
+}

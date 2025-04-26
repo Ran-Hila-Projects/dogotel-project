@@ -1,0 +1,54 @@
+.service-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background-color: #f8f2eb;
+  border-radius: 50px;
+  gap: 40px;
+  margin: 0 150px;
+  padding: 40px 80px;
+}
+
+.service-text {
+  flex: 1;
+  text-align: left;
+}
+
+.service-text h3 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #3b1d0f;
+}
+
+.service-text p {
+  margin: 10px 0;
+  font-size: 16px;
+  color: #3b1d0f;
+}
+
+.booking-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #3b1d0f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.booking-button:hover {
+  background-color: #5c2c16;
+}
+
+.service-image {
+  flex: 1;
+  max-width: 500px;
+}
+
+.service-image img {
+  width: 100%;
+  border-radius: 50px;
+  object-fit: cover;
+}
