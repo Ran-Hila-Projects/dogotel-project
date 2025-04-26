@@ -30,6 +30,7 @@
 .booking-button {
   margin-top: 20px;
   padding: 10px 20px;
+  padding-bottom: 12px;
   background-color: #3b1d0f;
   color: #fff;
   border: none;
@@ -39,7 +40,7 @@
 }
 
 .booking-button:hover {
-  background-color: #5c2c16;
+  background-color: #703b23;
 }
 
 .service-image {

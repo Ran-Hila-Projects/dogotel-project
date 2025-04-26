@@ -1,0 +1,36 @@
+.dining-card {
+  background-color: #f8f2eb;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.3s ease;
+}
+
+.dining-title {
+  font-size: 28px;
+  color: #3b1d0f;
+  margin-bottom: 10px;
+}
+
+.dining-description {
+  font-size: 18px;
+  color: #3b1d0f;
+  max-width: 600px;
+  margin-bottom: auto;
+}
+
+.dining-image-wrapper {
+  width: 100%;
+  max-width: 500px;
+}
+
+.dining-image-wrapper img {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  object-fit: cover;
+}

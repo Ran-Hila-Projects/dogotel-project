@@ -89,7 +89,7 @@ function Services() {
 
       <div className="up-fix">
         <section className="services-special">
-          <h2>Looking for a special custom treatment for your dog? 🛠️</h2>
+          <h2>Looking for a special custom treatment for your dog? 🦴</h2>
           <p>
             No problem! Call us at 052-8765342 to check availability and
             options.

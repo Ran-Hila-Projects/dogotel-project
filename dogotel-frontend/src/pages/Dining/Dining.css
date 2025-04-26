@@ -1,0 +1,26 @@
+.dining-header {
+  text-align: center;
+  margin-top: 18vh;
+}
+
+.dining-header h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  color: #3b1d0f;
+}
+
+.dining-header p {
+  font-size: 18px;
+  color: #3b1d0f;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.dining-list {
+  display: flex;
+  gap: 40px;
+  padding: 80px;
+  padding-bottom: 120px;
+  max-width: 1330px;
+  margin: auto;
+}
