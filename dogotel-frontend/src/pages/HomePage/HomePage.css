@@ -21,58 +21,82 @@
 
 .about-section {
   display: flex;
-  padding: 40px;
+  padding: 150px;
   align-items: center;
-  gap: 40px;
+  gap: 100px;
+  justify-self: center;
 }
 
 .about-text {
   flex: 1;
-  font-size: 1.1em;
-  line-height: 1.6;
+  font-size: 2em;
+  line-height: 1.4;
+  max-width: 500px;
 }
 
 .about-image {
   flex: 1;
+  max-width: 500px;
 }
 
 .about-image img {
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  border-radius: 50px;
 }
 
 .search-section {
-  background-color: #f4f4f4;
-  padding: 50px 20px;
+  background-color: var(--secondary-color);
+  padding: 150px 200px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
 }
 
 .search-container {
-  max-width: 800px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  max-width: 900px;
   background-color: white;
-  padding: 30px;
-  border-radius: 8px;
+  padding: 50px 90px;
+  border-radius: 30px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.search-container select,
+.search-container input {
+  font-size: 1rem;
+  line-height: 1rem;
+}
 .features-section {
   display: flex;
-  justify-content: space-around;
-  padding: 40px 20px;
+  justify-content: center;
+  padding: 100px 20px;
   text-align: center;
+  gap: 40px;
+  height: 100vh;
+}
+
+.wrapper-flex-col {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
 }
 
 .feature-item {
-  width: 30%;
+  position: relative; /* Important! */
+  border-radius: 50px;
+  overflow: hidden;
 }
 
 .feature-item img {
+  display: block;
   width: 100%;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  height: 100%;
+  object-fit: cover; /* Keep image nicely fit */
+  border-radius: 50px;
   transition: transform 0.3s ease-in-out;
 }
 
@@ -81,11 +105,51 @@
 }
 
 .feature-item h3 {
-  margin-top: 0;
-  color: #333;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: white;
+  font-size: 30px;
+  font-weight: bold;
+  pointer-events: none;
 }
 
 .feature-item a {
   text-decoration: none;
   color: inherit;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.color-light-brown {
+  color: var(--stain-brown);
+  margin-left: 10px;
+}
+
+/* Hero fade-in on load */
+.fade-in-hero {
+  opacity: 0;
+  animation: fadeInHero 2s ease forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes fadeInHero {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scroll reveal sections */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(60px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.scroll-reveal.active {
+  opacity: 1;
+  transform: translateY(0px);
 }

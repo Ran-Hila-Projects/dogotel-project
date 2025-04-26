@@ -14,14 +14,15 @@ function SearchForm() {
         <input type="date" id="checkout" />
       </div>
       <div className="input-group">
-        <label htmlFor="dogs">Number of Dogs</label>
+        <label htmlFor="dogs">Dogs</label>
         <select id="dogs">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3+</option>
+          <option value="1">01</option>
+          <option value="2">02</option>
+          <option value="3">03</option>
+          <option value="3">04</option>
         </select>
       </div>
-      <Link to="/rooms">
+      <Link to="/rooms" className="input-group">
         <button className="search-button">Check Availability</button>
       </Link>
     </div>
