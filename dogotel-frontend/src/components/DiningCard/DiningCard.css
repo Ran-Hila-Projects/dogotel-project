@@ -8,6 +8,7 @@
   align-items: center;
   gap: 20px;
   transition: transform 0.3s ease;
+  border: var(--font-brown-dark) 1px solid;
 }
 
 .dining-title {

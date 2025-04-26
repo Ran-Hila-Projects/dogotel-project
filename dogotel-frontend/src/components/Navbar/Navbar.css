@@ -16,6 +16,7 @@
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
   transform: translateX(-50%);
   left: 50%;
+  border: var(--font-brown-dark) 1px solid;
 }
 
 .navbar-content {
@@ -30,6 +31,7 @@
   font-weight: bold;
   color: #3b1d0f;
   text-decoration: none;
+  padding-bottom: 5px;
 }
 
 .nav-links {
@@ -62,7 +64,7 @@
 
 .login-btn,
 .logout-btn {
-  border: 2px solid var(--font-brown-dark);
+  border: 1px solid var(--font-brown-dark);
   padding: 6px 20px;
   padding-bottom: 10px;
   border-radius: 12px;
