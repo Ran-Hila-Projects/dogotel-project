@@ -1,31 +1,67 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Search.css";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-function SearchForm() {
+function SearchForm({
+  initialCheckin = "",
+  initialCheckout = "",
+  initialDogs = "1",
+  onSearch,
+}) {
+  const [checkin, setCheckin] = useState(initialCheckin);
+  const [checkout, setCheckout] = useState(initialCheckout);
+  const [dogs, setDogs] = useState(initialDogs);
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (onSearch) {
+      onSearch({ checkin, checkout, dogs });
+    } else {
+      // Pass values as query params to /rooms
+      navigate(`/rooms?checkin=${checkin}&checkout=${checkout}&dogs=${dogs}`);
+    }
+  };
+
   return (
-    <div className="search-inputs">
+    <form className="search-inputs" onSubmit={handleSearch}>
       <div className="input-group">
         <label htmlFor="checkin">Check-in</label>
-        <input type="date" id="checkin" />
+        <input
+          type="date"
+          id="checkin"
+          value={checkin}
+          onChange={(e) => setCheckin(e.target.value)}
+        />
       </div>
       <div className="input-group">
         <label htmlFor="checkout">Check-out</label>
-        <input type="date" id="checkout" />
+        <input
+          type="date"
+          id="checkout"
+          value={checkout}
+          onChange={(e) => setCheckout(e.target.value)}
+        />
       </div>
       <div className="input-group">
         <label htmlFor="dogs">Dogs</label>
-        <select id="dogs">
+        <select
+          id="dogs"
+          value={dogs}
+          onChange={(e) => setDogs(e.target.value)}
+        >
           <option value="1">01</option>
           <option value="2">02</option>
           <option value="3">03</option>
-          <option value="3">04</option>
+          <option value="4">04</option>
         </select>
       </div>
-      <Link to="/rooms" className="input-group">
-        <button className="search-button">Check Availability</button>
-      </Link>
-    </div>
+      <div className="input-group">
+        <button className="search-button" type="submit">
+          Check Availability
+        </button>
+      </div>
+    </form>
   );
 }
 

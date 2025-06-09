@@ -19,8 +19,7 @@ function App() {
         <Navbar isLoggedIn={isLoggedIn} userName={userName} />
         <Routes>
           <Route path="/" element={<HomePage />} />
-          {/* Later add more pages here */}
-          {/* <Route path="/rooms" element={<RoomsPage />} /> */}
+          <Route path="/rooms" element={<RoomsPage />} />
           <Route path="/dining" element={<DiningPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/aroom" element={<ARoomPage />} />
