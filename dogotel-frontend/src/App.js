@@ -10,11 +10,12 @@ import ARoomPage from "./pages/ARoom/ARoom";
 
 function App() {
   const isLoggedIn = false;
+  const userName = "Hila Tsivion";
 
   return (
     <BrowserRouter>
       <div className="app">
-        <Navbar isLoggedIn={isLoggedIn} />
+        <Navbar isLoggedIn={isLoggedIn} userName={userName} />
         <Routes>
           <Route path="/" element={<HomePage />} />
           {/* Later add more pages here */}
