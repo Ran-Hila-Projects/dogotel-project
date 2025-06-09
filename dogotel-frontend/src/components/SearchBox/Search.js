@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import "./Search.css";
 import { useNavigate } from "react-router-dom";
 
+function getToday() {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+}
+
 function SearchForm({
   initialCheckin = "",
   initialCheckout = "",
@@ -23,6 +28,8 @@ function SearchForm({
     }
   };
 
+  const today = getToday();
+
   return (
     <form className="search-inputs" onSubmit={handleSearch}>
       <div className="input-group">
@@ -31,7 +38,13 @@ function SearchForm({
           type="date"
           id="checkin"
           value={checkin}
-          onChange={(e) => setCheckin(e.target.value)}
+          min={today}
+          onChange={(e) => {
+            setCheckin(e.target.value);
+            if (checkout && e.target.value > checkout) {
+              setCheckout("");
+            }
+          }}
         />
       </div>
       <div className="input-group">
@@ -40,7 +53,9 @@ function SearchForm({
           type="date"
           id="checkout"
           value={checkout}
+          min={checkin || today}
           onChange={(e) => setCheckout(e.target.value)}
+          disabled={!checkin}
         />
       </div>
       <div className="input-group">

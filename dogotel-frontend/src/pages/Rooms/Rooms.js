@@ -68,19 +68,44 @@ function Rooms() {
   const [checkout, setCheckout] = useState(query.get("checkout") || "");
   const [dogs, setDogs] = useState(query.get("dogs") || "1");
   const [filteredRooms, setFilteredRooms] = useState(rooms);
+  // Track if a search has been performed
+  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    // Filter rooms by dogsAllowed
-    const filtered = rooms.filter((room) => room.dogsAllowed >= parseInt(dogs));
-    setFilteredRooms(filtered);
-  }, [dogs]);
+    if (searched) {
+      // Filter rooms by dogsAllowed (exact match)
+      const filtered = rooms.filter(
+        (room) => room.dogsAllowed === parseInt(dogs)
+      );
+      setFilteredRooms(filtered);
+    } else {
+      setFilteredRooms(rooms);
+    }
+  }, [dogs, searched]);
 
   const handleSearch = ({ checkin, checkout, dogs }) => {
     setCheckin(checkin);
     setCheckout(checkout);
     setDogs(dogs);
+    setSearched(true);
     // Update URL
     navigate(`/rooms?checkin=${checkin}&checkout=${checkout}&dogs=${dogs}`);
+  };
+
+  const showSummary =
+    searched && (dogs !== "" || checkin !== "" || checkout !== "");
+
+  const handleClear = () => {
+    setCheckin("");
+    setCheckout("");
+    setDogs("");
+    setFilteredRooms(rooms);
+    setSearched(false);
+    navigate("/rooms");
+  };
+
+  const handleRoomClick = (roomId) => {
+    navigate(`/aroom?id=${roomId}`);
   };
 
   return (
@@ -103,16 +128,52 @@ function Rooms() {
           />
         </div>
       </section>
-      <div
-        style={{
-          textAlign: "center",
-          margin: "30px 0 10px 0",
-          fontSize: "18px",
-          color: "#3b1d0f",
-        }}
-      >
-        Dogs amount selected: <b>{dogs}</b>
-      </div>
+      {showSummary && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 20,
+            background: "#f8f2eb",
+            borderRadius: 16,
+            padding: "18px 32px",
+            margin: "30px auto 10px auto",
+            maxWidth: 700,
+            fontSize: 18,
+            color: "#3b1d0f",
+            boxShadow: "0 2px 8px rgba(60,31,16,0.06)",
+          }}
+        >
+          <span>
+            Rooms for{" "}
+            {dogs ? (dogs === "1" ? "1 dog" : `${dogs} dogs`) : "all dogs"}
+            {checkin && checkout && (
+              <>
+                {" "}
+                from <b>{checkin}</b> to <b>{checkout}</b>
+              </>
+            )}
+          </span>
+          <button
+            style={{
+              marginLeft: 24,
+              background: "#fff",
+              color: "#3b1d0f",
+              border: "1.5px solid #bb7c48",
+              borderRadius: 10,
+              padding: "7px 22px",
+              fontSize: 16,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "background 0.2s, color 0.2s",
+            }}
+            onClick={handleClear}
+          >
+            Clear
+          </button>
+        </div>
+      )}
       <section className="rooms-list">
         {filteredRooms.length === 0 ? (
           <div style={{ color: "#bb7c48", fontSize: 22, margin: "40px auto" }}>
@@ -120,7 +181,12 @@ function Rooms() {
           </div>
         ) : (
           filteredRooms.map((room) => (
-            <div className="room-card" key={room.id}>
+            <div
+              className="room-card"
+              key={room.id}
+              onClick={() => handleRoomClick(room.id)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="room-info-container">
                 <h2 className="room-title">{room.title}</h2>
                 <p className="room-description">{room.description}</p>
@@ -129,7 +195,12 @@ function Rooms() {
                     <span>🐕 Dogs Allowed: {room.dogsAllowed}</span>
                     <span>💲 {room.pricePerNight} / night</span>
                   </div>
-                  <button className="book-btn">Book</button>
+                  <button
+                    className="book-btn"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Book
+                  </button>
                 </div>
               </div>
               <img
