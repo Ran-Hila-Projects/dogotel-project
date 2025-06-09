@@ -3,7 +3,14 @@ import { Link } from "react-router-dom";
 import "./Navbar.css";
 import { ReactComponent as ShoppingCart } from "../../assets/icons/shopping-cart.svg";
 
-function Navbar({ isLoggedIn }) {
+function getInitials(name) {
+  if (!name) return "";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function Navbar({ isLoggedIn, userName }) {
   return (
     <nav className="navbar">
       <div className="navbar-content">
@@ -22,7 +29,7 @@ function Navbar({ isLoggedIn }) {
           {isLoggedIn ? (
             <>
               <div className="user-info">
-                <span className="user-avatar">HT</span>
+                <span className="user-avatar">{getInitials(userName)}</span>
                 <Link to="/cart" className="cart-icon">
                   <ShoppingCart />
                 </Link>

@@ -7,14 +7,16 @@ import RoomsPage from "./pages/Rooms/Rooms";
 import DiningPage from "./pages/Dining/Dining";
 import ServicesPage from "./pages/Services/Services";
 import ARoomPage from "./pages/ARoom/ARoom";
+import NotFound from "./404";
 
 function App() {
   const isLoggedIn = false;
+  const userName = "Hila Tsivion";
 
   return (
     <BrowserRouter>
       <div className="app">
-        <Navbar isLoggedIn={isLoggedIn} />
+        <Navbar isLoggedIn={isLoggedIn} userName={userName} />
         <Routes>
           <Route path="/" element={<HomePage />} />
           {/* Later add more pages here */}
@@ -22,6 +24,7 @@ function App() {
           <Route path="/dining" element={<DiningPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/aroom" element={<ARoomPage />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </BrowserRouter>
