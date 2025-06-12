@@ -6,6 +6,7 @@ import { ReactComponent as DogIcon } from "../../assets/icons/dog-icon.svg";
 import { ReactComponent as RulerIcon } from "../../assets/icons/ruler-icon.svg";
 import { ReactComponent as DollarIcon } from "../../assets/icons/dollar-icon.svg";
 import { Link } from "react-router-dom";
+import BookingPopup from "../../components/BookingPopup/BookingPopup";
 
 // Simulate server fetching (temporary)
 const fetchRoomData = (roomId) => {
@@ -78,6 +79,7 @@ const fetchRoomData = (roomId) => {
 
 function ARoom() {
   const [roomData, setRoomData] = useState(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   useEffect(() => {
     // Simulate room ID coming from URL or navigation
@@ -118,7 +120,12 @@ function ARoom() {
                 <strong>Price per night:</strong> {roomData.price}$
               </p>
             </div>
-            <button className="booking-button">Include in my booking</button>
+            <button
+              className="booking-button"
+              onClick={() => setBookingOpen(true)}
+            >
+              Include in my booking
+            </button>
           </div>
           <div className="details-actions">
             <div className="separator-line"></div>
@@ -144,7 +151,7 @@ function ARoom() {
 
       {/* What's Included Section */}
       <section className="whats-included-section">
-        <h2>What’s Included? 🧸</h2>
+        <h2>What's Included? 🧸</h2>
         <div className="included-list">
           {roomData.included.map((item, index) => (
             <span key={index}>{item}</span>
@@ -167,6 +174,13 @@ function ARoom() {
         </div>
       </section>
       <Footer />
+      <BookingPopup
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        roomId={1} // In the future, use the real room id
+        onSave={() => setBookingOpen(false)}
+        dogsAmount={roomData.dogsAmount || 1}
+      />
     </div>
   );
 }

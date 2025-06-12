@@ -8,8 +8,10 @@ import room5 from "../../assets/rooms-images/room-5.png";
 import Footer from "../../components/Footer/Footer";
 import SearchForm from "../../components/SearchBox/Search";
 import { useLocation, useNavigate } from "react-router-dom";
+import BookingPopup from "../../components/BookingPopup/BookingPopup";
 
-const rooms = [
+// Temporary static data
+const staticRooms = [
   {
     id: "cozy-kennel",
     title: "The Cozy Kennel",
@@ -57,6 +59,14 @@ const rooms = [
   },
 ];
 
+// Future: fetch from AWS DynamoDB
+async function fetchRooms() {
+  // In the future, fetch from server
+  // const response = await fetch('/api/rooms');
+  // return await response.json();
+  return staticRooms;
+}
+
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -67,9 +77,20 @@ function Rooms() {
   const [checkin, setCheckin] = useState(query.get("checkin") || "");
   const [checkout, setCheckout] = useState(query.get("checkout") || "");
   const [dogs, setDogs] = useState(query.get("dogs") || "1");
-  const [filteredRooms, setFilteredRooms] = useState(rooms);
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
   // Track if a search has been performed
   const [searched, setSearched] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+
+  // Fetch rooms on mount or when cleared
+  useEffect(() => {
+    fetchRooms().then((data) => {
+      setRooms(data);
+      setFilteredRooms(data);
+    });
+  }, []);
 
   useEffect(() => {
     if (searched) {
@@ -81,7 +102,7 @@ function Rooms() {
     } else {
       setFilteredRooms(rooms);
     }
-  }, [dogs, searched]);
+  }, [dogs, searched, rooms]);
 
   const handleSearch = ({ checkin, checkout, dogs }) => {
     setCheckin(checkin);
@@ -106,6 +127,24 @@ function Rooms() {
 
   const handleRoomClick = (roomId) => {
     navigate(`/aroom?id=${roomId}`);
+  };
+
+  const handleBookClick = (e, roomId) => {
+    e.stopPropagation();
+    setSelectedRoomId(roomId);
+    setBookingOpen(true);
+  };
+
+  const handleBookingClose = () => {
+    setBookingOpen(false);
+    setSelectedRoomId(null);
+  };
+
+  const handleBookingSave = (data) => {
+    // In the future, send booking data to server
+    setBookingOpen(false);
+    setSelectedRoomId(null);
+    // Optionally show a success message
   };
 
   return (
@@ -197,7 +236,7 @@ function Rooms() {
                   </div>
                   <button
                     className="book-btn"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => handleBookClick(e, room.id)}
                   >
                     Book
                   </button>
@@ -213,6 +252,17 @@ function Rooms() {
           ))
         )}
       </section>
+      <BookingPopup
+        open={bookingOpen}
+        onClose={handleBookingClose}
+        roomId={selectedRoomId}
+        onSave={handleBookingSave}
+        dogsAmount={
+          selectedRoomId
+            ? rooms.find((r) => r.id === selectedRoomId)?.dogsAllowed || 1
+            : 1
+        }
+      />
       <Footer />
     </div>
   );

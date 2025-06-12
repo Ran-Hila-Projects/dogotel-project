@@ -1,0 +1,109 @@
+.booking-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(60, 31, 16, 0.25);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.booking-popup {
+  background: #fff;
+  border-radius: 18px;
+  padding: 36px 40px 30px 40px;
+  min-width: 350px;
+  max-width: 95vw;
+  box-shadow: 0 8px 40px rgba(60, 31, 16, 0.18);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #3b1d0f;
+  cursor: pointer;
+}
+
+.calendar-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.unavailable-dates {
+  font-size: 0.95em;
+  color: #bb7c48;
+  margin-top: 8px;
+}
+
+.dog-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dog-info-section input,
+.dog-info-section textarea {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5d8c7;
+  font-size: 1em;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.dog-info-section textarea {
+  min-height: 48px;
+  resize: vertical;
+  margin-top: 16px;
+}
+
+.save-btn {
+  background: #3b1d0f;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 36px 16px 36px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: background 0.2s, color 0.2s;
+}
+
+.save-btn:hover {
+  background: #bb7c48;
+  color: #fff;
+}
+
+.dog-fields-container {
+  display: flex;
+  gap: 10px;
+}
+
+.input-error {
+  border: 2px solid #e74c3c !important;
+  background: #fff6f6;
+}
+
+.field-error-msg {
+  color: #e74c3c;
+  font-size: 0.85em;
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  padding-left: 3px;
+}

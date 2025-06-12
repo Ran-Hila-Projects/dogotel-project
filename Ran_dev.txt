@@ -1,0 +1,117 @@
+Dogotel Backend API Requirements
+================================
+
+Below is a list of server API functions you need to implement to support the Dogotel frontend. Each function includes the endpoint, method, expected request/response, and a short description.
+
+---
+
+1. Get All Rooms
+----------------
+- Endpoint: GET /api/rooms
+- Description: Returns a list of all rooms with all relevant data for the rooms page.
+- Response Example:
+  [
+    {
+      "id": "cozy-kennel",
+      "title": "The Cozy Kennel",
+      "description": "Perfect for solo nappers...",
+      "dogsAllowed": 1,
+      "pricePerNight": 55,
+      "imageUrl": "/rooms-images/room-1.jpg"
+    },
+    ...
+  ]
+
+---
+
+2. Get Room Details
+-------------------
+- Endpoint: GET /api/rooms/:id
+- Description: Returns detailed info for a specific room, including features, reviews, and all booking-relevant data.
+- Response Example:
+  {
+    "id": "cozy-kennel",
+    "title": "The Cozy Kennel",
+    "subtitle": "Perfect for Solo Nappers 💤",
+    "description": "A quiet, comfy room...",
+    "dogsAllowed": 1,
+    "size": "30m²",
+    "price": 55,
+    "imageUrl": "/rooms-images/room-1.jpg",
+    "features": ["Daily housekeeping...", "Soft orthopedic bed", ...],
+    "included": ["...", "..."],
+    "reviews": [
+      { "name": "Hila Tsivion", "stars": 5, "review": "Amazing experience!" }
+    ]
+  }
+
+---
+
+3. Get Room Unavailable Dates
+-----------------------------
+- Endpoint: GET /api/rooms/:id/unavailable-dates
+- Description: Returns a list of date ranges or individual dates when the room is already booked.
+- Response Example:
+  {
+    "roomId": "cozy-kennel",
+    "unavailableDates": [
+      "2024-07-10",
+      "2024-07-11",
+      "2024-07-12",
+      "2024-07-20"
+    ]
+  }
+
+---
+
+4. Create a Booking
+-------------------
+- Endpoint: POST /api/bookings
+- Description: Creates a new booking for a room.
+- Request Example:
+  {
+    "roomId": "cozy-kennel",
+    "startDate": "2024-07-15",
+    "endDate": "2024-07-18",
+    "dogs": [
+      { "name": "Rex", "breed": "Labrador", "age": 3, "notes": "Loves toys" }
+    ],
+    "userId": "user-123" // if you have authentication
+  }
+- Response Example:
+  {
+    "success": true,
+    "bookingId": "booking-456"
+  }
+
+---
+
+5. (Optional) Get User Bookings
+-------------------------------
+- Endpoint: GET /api/bookings?userId=...
+- Description: Returns all bookings for a specific user (for a future "My Bookings" page).
+- Response Example:
+  [
+    {
+      "bookingId": "booking-456",
+      "roomId": "cozy-kennel",
+      "startDate": "2024-07-15",
+      "endDate": "2024-07-18",
+      "dogs": [ ... ]
+    }
+  ]
+
+---
+
+Summary Table
+=============
+
+| Function                  | Method | Endpoint                              | Description                        |
+|---------------------------|--------|---------------------------------------|------------------------------------|
+| Get all rooms             | GET    | /api/rooms                            | List all rooms                     |
+| Get room details          | GET    | /api/rooms/:id                        | Details for a specific room        |
+| Get room unavailable dates| GET    | /api/rooms/:id/unavailable-dates      | Dates when room is booked          |
+| Create a booking          | POST   | /api/bookings                         | Book a room                        |
+| Get user bookings         | GET    | /api/bookings?userId=...              | List bookings for a user           |
+
+If you need more details or request/response examples for other features, let the frontend team know!
