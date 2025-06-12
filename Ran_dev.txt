@@ -1,10 +1,6 @@
 Dogotel Backend API Requirements
 ================================
 
-Below is a list of server API functions you need to implement to support the Dogotel frontend. Each function includes the endpoint, method, expected request/response, and a short description.
-
----
-
 1. Get All Rooms
 ----------------
 - Endpoint: GET /api/rooms
@@ -64,29 +60,8 @@ Below is a list of server API functions you need to implement to support the Dog
 
 ---
 
-4. Create a Booking
--------------------
-- Endpoint: POST /api/bookings
-- Description: Creates a new booking for a room.
-- Request Example:
-  {
-    "roomId": "cozy-kennel",
-    "startDate": "2024-07-15",
-    "endDate": "2024-07-18",
-    "dogs": [
-      { "name": "Rex", "breed": "Labrador", "age": 3, "notes": "Loves toys" }
-    ],
-    "userId": "user-123" // if you have authentication
-  }
-- Response Example:
-  {
-    "success": true,
-    "bookingId": "booking-456"
-  }
 
----
-
-5. (Optional) Get User Bookings
+4. Get User Bookings
 -------------------------------
 - Endpoint: GET /api/bookings?userId=...
 - Description: Returns all bookings for a specific user (for a future "My Bookings" page).
@@ -103,15 +78,69 @@ Below is a list of server API functions you need to implement to support the Dog
 
 ---
 
-Summary Table
-=============
+5. Create a Booking (with Dining and Services)
+יש לקחת פה בחשבון שלא בטוח יהיה אוכל או שירותים נלווים שנבחרו
+----------------------------------------------
+- Endpoint: POST /api/bookings
+- Description: Creates a new booking for a room, including selected dining and services.
+- Request Example:
+  {
+    "roomId": "cozy-kennel",
+    "startDate": "2024-07-15",
+    "endDate": "2024-07-18",
+    "dogs": [
+      { "name": "Rex", "breed": "Labrador", "age": 3, "notes": "Loves toys" }
+    ],
+    "diningId": ["full-day-meals"], 
+    "serviceIds": ["grooming", "fitness-training"],
+    "userId": "user-123"
+  }
+- Response Example:
+  {
+    "success": true,
+    "bookingId": "booking-456"
+  }
 
-| Function                  | Method | Endpoint                              | Description                        |
-|---------------------------|--------|---------------------------------------|------------------------------------|
-| Get all rooms             | GET    | /api/rooms                            | List all rooms                     |
-| Get room details          | GET    | /api/rooms/:id                        | Details for a specific room        |
-| Get room unavailable dates| GET    | /api/rooms/:id/unavailable-dates      | Dates when room is booked          |
-| Create a booking          | POST   | /api/bookings                         | Book a room                        |
-| Get user bookings         | GET    | /api/bookings?userId=...              | List bookings for a user           |
+---
 
-If you need more details or request/response examples for other features, let the frontend team know!
+6. Get Dining/Services Details
+-----------------------------------------
+- Endpoint: GET /api/dining/:id
+- Endpoint: GET /api/services/:id
+- Description: Returns details for a specific dining or service option.
+- Response Example:
+  {
+    "id": "grooming",
+    "title": "Grooming",
+    "description": "Fresh, clean, and fluffy...",
+    "price": 30,
+    "details": "..."
+  }
+
+---
+
+7. Add a Review (Authenticated, Only After Stay)
+------------------------------------------------
+- Endpoint: POST /api/rooms/:id/reviews
+- Description: Allows a logged-in user to add a review for a room, but only if they have a completed booking for that room.
+- Requirements:
+  - User must be authenticated (send userId or via session/JWT).
+  - Server must check that the user has a completed booking for the room before accepting the review.
+- Request Example:
+  {
+    "userId": "user-123",
+    "stars": 5,
+    "review": "Amazing experience! My dog loved it!"
+  }
+- Response Example:
+  {
+    "success": true,
+    "reviewId": "review-789"
+  }
+- Error Example (not logged in or not eligible):
+  {
+    "success": false,
+    "error": "User must be logged in and have a completed booking for this room to leave a review."
+  }
+
+---
