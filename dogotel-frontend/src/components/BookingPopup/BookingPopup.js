@@ -1,15 +1,56 @@
 import React, { useState, useEffect } from "react";
 import "./BookingPopup.css";
 
-// Demo unavailable dates (YYYY-MM-DD)
-const demoUnavailable = [
-  "2024-07-10",
-  "2024-07-11",
-  "2024-07-12",
-  "2024-07-20",
+// Demo unavailableRanges for testing
+const demoUnavailableRanges = [
+  { start: "2025-07-10", end: "2025-07-12" },
+  { start: "2025-07-20", end: "2025-07-20" },
+  { start: "2026-01-14", end: "2026-01-14" },
 ];
 
-function BookingPopup({ open, onClose, roomId, onSave, dogsAmount = 1 }) {
+function getNextUnavailableDate(startDate, unavailableDates) {
+  const start = new Date(startDate);
+  const sorted = unavailableDates
+    .map((d) => new Date(d))
+    .filter((d) => d > start)
+    .sort((a, b) => a - b);
+  return sorted.length > 0 ? sorted[0] : null;
+}
+
+function isRangeContinuous(start, end, unavailableDates) {
+  let d = new Date(start);
+  const endDate = new Date(end);
+  while (d <= endDate) {
+    const dStr = d.toISOString().split("T")[0];
+    if (unavailableDates.includes(dStr)) return false;
+    d.setDate(d.getDate() + 1);
+  }
+  return true;
+}
+
+// unavailableRanges: [{start: 'YYYY-MM-DD', end: 'YYYY-MM-DD'}, ...]
+function getUnavailableDatesFromRanges(ranges) {
+  const dates = [];
+  for (const range of ranges) {
+    let d = new Date(range.start);
+    const end = new Date(range.end);
+    while (d <= end) {
+      dates.push(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return dates;
+}
+
+function BookingPopup({
+  open,
+  onClose,
+  roomId,
+  onSave,
+  dogsAmount = 1,
+  unavailableRanges = demoUnavailableRanges,
+  // unavailableRanges = [], לשים את זה אחרי שמעבירים לשרת
+}) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [dogs, setDogs] = useState(
@@ -22,6 +63,9 @@ function BookingPopup({ open, onClose, roomId, onSave, dogsAmount = 1 }) {
   );
   const [error, setError] = useState("");
   const [showFieldErrors, setShowFieldErrors] = useState(false);
+
+  // In the future, fetch unavailableRanges from the server for this roomId
+  const unavailableDates = getUnavailableDatesFromRanges(unavailableRanges);
 
   useEffect(() => {
     setDogs(
@@ -49,18 +93,71 @@ function BookingPopup({ open, onClose, roomId, onSave, dogsAmount = 1 }) {
     setShowFieldErrors(false);
   };
 
-  const isValid = dogs.every(
-    (dog) => dog.name.trim() && dog.breed.trim() && dog.age.trim()
-  );
+  // Date logic
+  const today = new Date().toISOString().split("T")[0];
+  let endMin = startDate
+    ? new Date(new Date(startDate).getTime() + 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0]
+    : today;
+  let endMax = (() => {
+    if (!startDate) return "";
+    const nextUnavailable = getNextUnavailableDate(startDate, unavailableDates);
+    if (!nextUnavailable) return "";
+    const d = new Date(nextUnavailable);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split("T")[0];
+  })();
+
+  const isValid =
+    startDate &&
+    endDate &&
+    isRangeContinuous(startDate, endDate, unavailableDates) &&
+    dogs.every((dog) => dog.name.trim() && dog.breed.trim() && dog.age.trim());
 
   const handleSave = () => {
-    if (!isValid) {
+    if (!startDate || !endDate) {
+      setError("Please select a valid date range.");
+      setShowFieldErrors(true);
+      return;
+    }
+    if (!isRangeContinuous(startDate, endDate, unavailableDates)) {
+      setError(
+        "Selected date range is not available. Please choose a continuous range without unavailable dates."
+      );
+      setShowFieldErrors(true);
+      return;
+    }
+    if (
+      !dogs.every(
+        (dog) => dog.name.trim() && dog.breed.trim() && dog.age.trim()
+      )
+    ) {
       setShowFieldErrors(true);
       return;
     }
     setError("");
     setShowFieldErrors(false);
-    onSave && onSave({ startDate, endDate, dogs });
+    onSave &&
+      onSave({
+        startDate,
+        endDate,
+        dogs,
+      });
+  };
+
+  const handleStartDateChange = (value) => {
+    if (unavailableDates.includes(value)) {
+      setError(
+        "Selected start date is unavailable. Please choose another date."
+      );
+      setStartDate("");
+      setEndDate("");
+      return;
+    }
+    setError("");
+    setStartDate(value);
+    setEndDate("");
   };
 
   if (!open) return null;
@@ -77,20 +174,18 @@ function BookingPopup({ open, onClose, roomId, onSave, dogsAmount = 1 }) {
           <input
             type="date"
             value={startDate}
-            min={new Date().toISOString().split("T")[0]}
-            onChange={(e) => setStartDate(e.target.value)}
+            min={today}
+            onChange={(e) => handleStartDateChange(e.target.value)}
           />
           <span style={{ margin: "0 10px" }}>to</span>
           <input
             type="date"
             value={endDate}
-            min={startDate || new Date().toISOString().split("T")[0]}
+            min={endMin}
+            max={endMax}
             onChange={(e) => setEndDate(e.target.value)}
             disabled={!startDate}
           />
-          <div className="unavailable-dates">
-            <b>Unavailable:</b> {demoUnavailable.join(", ")}
-          </div>
         </div>
         <div className="dog-info-section">
           {dogs.map((dog, i) => (

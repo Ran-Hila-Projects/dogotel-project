@@ -60,7 +60,6 @@ Dogotel Backend API Requirements
 
 ---
 
-
 4. Get User Bookings
 -------------------------------
 - Endpoint: GET /api/bookings?userId=...
@@ -144,3 +143,21 @@ Dogotel Backend API Requirements
   }
 
 ---
+
+8. Get Room Unavailable Date Ranges
+-----------------------------------
+- Endpoint: GET /api/rooms/:id/unavailable-ranges
+- Description: Returns a list of unavailable date ranges for a specific room (for booking logic).
+- Response Example:
+  {
+    "roomId": "cozy-kennel",
+    "unavailableRanges": [
+      { "start": "2025-07-10", "end": "2025-07-12" },
+      { "start": "2025-07-20", "end": "2025-07-20" },
+      { "start": "2026-01-14", "end": "2026-01-14" }
+    ]
+  }
+
+---
+
+עבור כל חדר יהיה צריך לשמור את התאריכים שהוא לא זמין בהם. 
