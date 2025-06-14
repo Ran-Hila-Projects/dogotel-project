@@ -28,7 +28,7 @@ function Dining() {
         <h1>Dog Dining Options</h1>
         <p>
           At Dogotel, dining is an important part of the experience. We offer
-          delicious, healthy meals tailored to your dog’s tastes and needs.
+          delicious, healthy meals tailored to your dog's tastes and needs.
         </p>
       </section>
 
@@ -38,8 +38,13 @@ function Dining() {
           emoji="🍽️"
           description="Includes breakfast, lunch, and dinner each day — fresh meals to keep your dog happy & healthy throughout their stay."
           image={dinnerImage}
+          price={20}
           onAdd={() =>
-            handleAddDining({ id: "full-day-meals", title: "Full-Day Meals" })
+            handleAddDining({
+              id: "full-day-meals",
+              title: "Full-Day Meals",
+              price: 20,
+            })
           }
         />
         <DiningCard
@@ -47,8 +52,13 @@ function Dining() {
           emoji="🍳"
           description="Includes either breakfast or dinner daily — perfect for dogs with smaller appetites or shorter stays."
           image={breakfastImage}
+          price={12}
           onAdd={() =>
-            handleAddDining({ id: "half-day-meals", title: "Half-Day Meals" })
+            handleAddDining({
+              id: "half-day-meals",
+              title: "Half-Day Meals",
+              price: 12,
+            })
           }
         />
         <DiningCard
@@ -56,10 +66,12 @@ function Dining() {
           emoji="🥬"
           description="Custom-prepared meals tailored to your dog's specific dietary needs, including allergy-friendly and fitness-focused options."
           image={customImage}
+          price={25}
           onAdd={() =>
             handleAddDining({
               id: "special-diet-plan",
               title: "Special Diet Plan",
+              price: 25,
             })
           }
         />

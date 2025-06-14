@@ -7,7 +7,7 @@
   border-radius: 50px;
   gap: 40px;
   margin: 0 150px;
-  padding: 40px 80px;
+  padding: 40px 50px;
 }
 
 .service-text {
@@ -50,6 +50,6 @@
 
 .service-image img {
   width: 100%;
-  border-radius: 50px;
+  border-radius: 33px;
   object-fit: cover;
 }

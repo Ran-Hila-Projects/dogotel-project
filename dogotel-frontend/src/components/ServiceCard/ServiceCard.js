@@ -9,6 +9,8 @@ function ServiceCard({
   emoji,
   isPassed,
   isActive,
+  price,
+  onAdd,
 }) {
   const cardClass = isPassed
     ? "service-card passed"
@@ -24,7 +26,14 @@ function ServiceCard({
         </h3>
         <p>{text1}</p>
         <p>{text2}</p>
-        <button className="booking-button">Include in my booking</button>
+        <div style={{ fontWeight: 500, color: "#3b1d0f", margin: "10px 0" }}>
+          Price: {price ? `$${price}` : "N/A"}
+        </div>
+        {onAdd && (
+          <button className="booking-button" onClick={onAdd}>
+            Include in my booking
+          </button>
+        )}
       </div>
       <div className="service-image">
         <img src={image} alt={title} />

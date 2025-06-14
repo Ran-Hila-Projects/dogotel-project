@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import "./general.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar/Navbar";
@@ -7,22 +7,32 @@ import RoomsPage from "./pages/Rooms/Rooms";
 import DiningPage from "./pages/Dining/Dining";
 import ServicesPage from "./pages/Services/Services";
 import ARoomPage from "./pages/ARoom/ARoom";
+import CartPage from "./pages/Cart/Cart";
 import NotFound from "./404";
 
 function App() {
-  const isLoggedIn = false;
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const userName = "Hila Tsivion";
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
 
   return (
     <BrowserRouter>
       <div className="app">
-        <Navbar isLoggedIn={isLoggedIn} userName={userName} />
+        <Navbar
+          isLoggedIn={isLoggedIn}
+          userName={userName}
+          onLogout={handleLogout}
+        />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/rooms" element={<RoomsPage />} />
           <Route path="/dining" element={<DiningPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/aroom" element={<ARoomPage />} />
+          <Route path="/cart" element={<CartPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

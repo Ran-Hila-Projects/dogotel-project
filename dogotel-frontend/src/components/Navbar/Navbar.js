@@ -10,7 +10,12 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function Navbar({ isLoggedIn, userName }) {
+function Navbar({ isLoggedIn, userName, onLogout }) {
+  const handleLogout = () => {
+    localStorage.clear();
+    if (onLogout) onLogout();
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-content">
@@ -34,7 +39,9 @@ function Navbar({ isLoggedIn, userName }) {
                   <ShoppingCart />
                 </Link>
               </div>
-              <button className="logout-btn">Log out</button>
+              <button className="logout-btn" onClick={handleLogout}>
+                Log out
+              </button>
             </>
           ) : (
             <button className="login-btn">Log in</button>

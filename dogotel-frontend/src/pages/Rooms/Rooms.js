@@ -13,7 +13,7 @@ import BookingPopup from "../../components/BookingPopup/BookingPopup";
 // Temporary static data
 const staticRooms = [
   {
-    id: "cozy-kennel",
+    id: "1",
     title: "The Cozy Kennel",
     description:
       "Perfect for solo nappers. A quiet, comfy room for solo travelers. Includes a cozy bed, chew toys, and a snuggly blanket.",
@@ -22,7 +22,7 @@ const staticRooms = [
     imagePath: room1,
   },
   {
-    id: "deluxe-duo-den",
+    id: "2",
     title: "Deluxe Duo Den",
     description:
       "Spacious and luxurious suite for two dogs. Great for siblings or best friends. Comes with two beds and extra treats.",
@@ -31,7 +31,7 @@ const staticRooms = [
     imagePath: room2,
   },
   {
-    id: "garden-sniff-suite",
+    id: "3",
     title: "Garden Sniff Suite",
     description:
       "A sunny room with direct access to our sniff-friendly garden. Ideal for active pups who love fresh grass and fresh air.",
@@ -40,7 +40,7 @@ const staticRooms = [
     imagePath: room3,
   },
   {
-    id: "spa-paws-retreat",
+    id: "4",
     title: "Spa Paws Retreat",
     description:
       "A calm, luxury suite for pampered pups. Includes spa-scented bedding and daily relaxation music.",
@@ -49,7 +49,7 @@ const staticRooms = [
     imagePath: room4,
   },
   {
-    id: "family-fur-cabin",
+    id: "5",
     title: "Family Fur Cabin",
     description:
       "Perfect for 3 furry siblings – or a party! A wide room with space to run, jump and nap together.",
@@ -262,6 +262,7 @@ function Rooms() {
             ? rooms.find((r) => r.id === selectedRoomId)?.dogsAllowed || 1
             : 1
         }
+        rooms={rooms}
       />
       <Footer />
     </div>

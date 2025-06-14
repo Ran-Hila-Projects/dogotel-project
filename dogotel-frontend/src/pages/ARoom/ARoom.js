@@ -5,14 +5,18 @@ import ReviewCard from "../../components/ReviewCard/ReviewCard";
 import { ReactComponent as DogIcon } from "../../assets/icons/dog-icon.svg";
 import { ReactComponent as RulerIcon } from "../../assets/icons/ruler-icon.svg";
 import { ReactComponent as DollarIcon } from "../../assets/icons/dollar-icon.svg";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
+import Loader from "../../components/Loader/Loader";
 
-// Simulate server fetching (temporary)
-const fetchRoomData = (roomId) => {
-  // Imagine this object comes from your backend API
+// Simulate async fetch call for room data
+async function fetchRoomDataAsync(roomId) {
+  // Simulate network delay
+  await new Promise((res) => setTimeout(res, 300));
+  // Demo data (could be replaced with real fetch)
   const rooms = {
     1: {
+      id: "1",
       title: "The Cozy Kennel",
       subtitle: "Perfect for Solo Nappers 💤",
       description:
@@ -48,14 +52,15 @@ const fetchRoomData = (roomId) => {
       ],
     },
     2: {
-      title: "The Playful Suite",
+      id: "2",
+      title: "Deluxe Duo Den",
       subtitle: "For Active Explorers 🐕‍🦺",
       description:
-        "Spacious suite with play areas and plenty of room for energetic pups. Comes with premium chew toys and a view to the park.",
+        "Spacious and luxurious suite for two dogs. Great for siblings or best friends. Comes with two beds and extra treats.",
       dogsAmount: 2,
       size: "50m²",
       price: 80,
-      image: require("../../assets/rooms-images/room-1.jpg"),
+      image: require("../../assets/rooms-images/room-2.png"),
       included: [
         "Private play area",
         "Water fountain for hydration",
@@ -73,23 +78,26 @@ const fetchRoomData = (roomId) => {
       ],
     },
   };
-
   return rooms[roomId] || null;
-};
+}
+
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 function ARoom() {
+  const query = useQuery();
+  const roomId = query.get("id") || "1";
   const [roomData, setRoomData] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
 
   useEffect(() => {
-    // Simulate room ID coming from URL or navigation
-    const roomId = "1"; // Temporary: in future this will be dynamic
-    const data = fetchRoomData(roomId);
-    setRoomData(data);
-  }, []);
+    setRoomData(null);
+    fetchRoomDataAsync(roomId).then((data) => setRoomData(data));
+  }, [roomId]);
 
   if (!roomData) {
-    return <div>Loading room details...</div>;
+    return <Loader />;
   }
 
   return (
@@ -177,9 +185,17 @@ function ARoom() {
       <BookingPopup
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        roomId={1} // In the future, use the real room id
+        roomId={roomId}
         onSave={() => setBookingOpen(false)}
         dogsAmount={roomData.dogsAmount || 1}
+        rooms={[
+          {
+            id: roomId,
+            title: roomData.title,
+            pricePerNight: roomData.price,
+            dogsAllowed: roomData.dogsAmount,
+          },
+        ]}
       />
     </div>
   );

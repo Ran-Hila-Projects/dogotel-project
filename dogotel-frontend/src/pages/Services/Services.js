@@ -35,6 +35,7 @@ function Services() {
       text2:
         "We use natural, dog-friendly products and give each pup a spa-like experience.",
       image: groomingImage,
+      price: 30,
     },
     {
       title: "Daily Walks",
@@ -44,6 +45,7 @@ function Services() {
       text2:
         "Walks are tailored to your dog's pace, curiosity, and walking style.",
       image: walksImage,
+      price: 15,
     },
     {
       title: "Learn a New Skill",
@@ -53,6 +55,7 @@ function Services() {
       text2:
         "Our creative sessions build confidence and keep clever pups engaged.",
       image: skillImage,
+      price: 40,
     },
     {
       title: "Fitness Training",
@@ -62,6 +65,7 @@ function Services() {
       text2:
         "It's the perfect mix of movement and motivation for a healthy, happy pup.",
       image: fitnessImage,
+      price: 35,
     },
   ];
 
@@ -102,6 +106,7 @@ function Services() {
                 handleAddService({
                   id: service.title.toLowerCase().replace(/ /g, "-"),
                   title: service.title,
+                  price: service.price,
                 })
               }
             />

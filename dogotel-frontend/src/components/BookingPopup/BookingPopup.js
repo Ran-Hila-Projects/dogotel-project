@@ -48,8 +48,9 @@ function BookingPopup({
   roomId,
   onSave,
   dogsAmount = 1,
-  unavailableRanges = demoUnavailableRanges,
   // unavailableRanges = [], לשים את זה אחרי שמעבירים לשרת
+  unavailableRanges = demoUnavailableRanges,
+  rooms = [], // Pass rooms if available for price lookup
 }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -144,6 +145,13 @@ function BookingPopup({
       dogs,
       roomId,
     };
+    // Add pricePerNight if possible
+    if (rooms && rooms.length > 0 && roomId) {
+      const foundRoom = rooms.find((r) => r.id === roomId);
+      if (foundRoom && foundRoom.pricePerNight) {
+        bookingDetails.pricePerNight = foundRoom.pricePerNight;
+      }
+    }
     // Save to localStorage (merge with existing cart if present)
     let cart = {};
     try {
