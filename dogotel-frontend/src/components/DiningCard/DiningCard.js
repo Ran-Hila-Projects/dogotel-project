@@ -1,7 +1,7 @@
 import React from "react";
 import "./DiningCard.css";
 
-function DiningCard({ title, emoji, description, image }) {
+function DiningCard({ title, emoji, description, image, onAdd }) {
   return (
     <div className="dining-card">
       <h3 className="dining-title">
@@ -11,7 +11,11 @@ function DiningCard({ title, emoji, description, image }) {
       <div className="dining-image-wrapper">
         <img src={image} alt={title} />
       </div>
-      <button className="booking-button">Add to my booking</button>
+      {onAdd && (
+        <button className="booking-button" onClick={onAdd}>
+          Add to my booking
+        </button>
+      )}
     </div>
   );
 }

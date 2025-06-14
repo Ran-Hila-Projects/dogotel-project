@@ -138,12 +138,20 @@ function BookingPopup({
     }
     setError("");
     setShowFieldErrors(false);
-    onSave &&
-      onSave({
-        startDate,
-        endDate,
-        dogs,
-      });
+    const bookingDetails = {
+      startDate,
+      endDate,
+      dogs,
+      roomId,
+    };
+    // Save to localStorage (merge with existing cart if present)
+    let cart = {};
+    try {
+      cart = JSON.parse(localStorage.getItem("dogotelBooking")) || {};
+    } catch (e) {}
+    cart.room = bookingDetails;
+    localStorage.setItem("dogotelBooking", JSON.stringify(cart));
+    onSave && onSave(bookingDetails);
   };
 
   const handleStartDateChange = (value) => {

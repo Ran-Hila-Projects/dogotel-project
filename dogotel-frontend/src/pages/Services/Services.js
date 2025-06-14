@@ -9,6 +9,7 @@ import Footer from "../../components/Footer/Footer";
 
 function Services() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [added, setAdded] = useState("");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,7 +49,7 @@ function Services() {
       title: "Learn a New Skill",
       emoji: "🧠",
       text1:
-        "Why settle for “sit” when your dog can learn to sail, skateboard, or play chess?",
+        'Why settle for "sit" when your dog can learn to sail, skateboard, or play chess?',
       text2:
         "Our creative sessions build confidence and keep clever pups engaged.",
       image: skillImage,
@@ -57,12 +58,27 @@ function Services() {
       title: "Fitness Training",
       emoji: "💪",
       text1:
-        "From zoomies to zen – we tailor fun workouts to your dog’s energy level and personality.",
+        "From zoomies to zen – we tailor fun workouts to your dog's energy level and personality.",
       text2:
-        "It’s the perfect mix of movement and motivation for a healthy, happy pup.",
+        "It's the perfect mix of movement and motivation for a healthy, happy pup.",
       image: fitnessImage,
     },
   ];
+
+  const handleAddService = (service) => {
+    let cart = {};
+    try {
+      cart = JSON.parse(localStorage.getItem("dogotelBooking")) || {};
+    } catch (e) {}
+    if (!cart.services) cart.services = [];
+    // Avoid duplicates
+    if (!cart.services.find((s) => s.id === service.id)) {
+      cart.services.push(service);
+    }
+    localStorage.setItem("dogotelBooking", JSON.stringify(cart));
+    setAdded(service.title);
+    setTimeout(() => setAdded(""), 2000);
+  };
 
   return (
     <div className="services-page">
@@ -70,7 +86,7 @@ function Services() {
         <h1>Our Services</h1>
         <p>
           At Dogotel, we believe your dog deserves more than just a place to
-          stay — they deserve experiences. That’s why we offer a variety of
+          stay — they deserve experiences. That's why we offer a variety of
           services to keep your pup happy, active, and always learning.
         </p>
       </section>
@@ -82,10 +98,22 @@ function Services() {
               {...service}
               isPassed={index < activeIndex}
               isActive={index === activeIndex}
+              onAdd={() =>
+                handleAddService({
+                  id: service.title.toLowerCase().replace(/ /g, "-"),
+                  title: service.title,
+                })
+              }
             />
           </div>
         ))}
       </section>
+
+      {added && (
+        <div style={{ textAlign: "center", color: "#3b1d0f", marginTop: 20 }}>
+          Added {added} to your booking!
+        </div>
+      )}
 
       <div className="up-fix">
         <section className="services-special">
