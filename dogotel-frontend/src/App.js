@@ -9,10 +9,11 @@ import ServicesPage from "./pages/Services/Services";
 import ARoomPage from "./pages/ARoom/ARoom";
 import CartPage from "./pages/Cart/Cart";
 import NotFound from "./404";
+import AdminPage from "./pages/Admin/Admin";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const userName = "Hila Tsivion";
+  const userName = "admin";
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -33,6 +34,7 @@ function App() {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/aroom" element={<ARoomPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/admin" element={<AdminPage userName={userName} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

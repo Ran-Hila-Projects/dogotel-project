@@ -28,6 +28,7 @@ function Navbar({ isLoggedIn, userName, onLogout }) {
           <Link to="/rooms">Rooms</Link>
           <Link to="/dining">Dining</Link>
           <Link to="/services">Services</Link>
+          {userName === "admin" && <Link to="/admin">Admin</Link>}
         </div>
 
         <div className="nav-actions">

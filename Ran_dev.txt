@@ -78,7 +78,7 @@ Dogotel Backend API Requirements
 ---
 
 5. Create a Booking (with Dining and Services)
-יש לקחת פה בחשבון שלא בטוח יהיה אוכל או שירותים נלווים שנבחרו
+יש לקחת פה בחשבון שלא בטוח יהיה שירותים נלווים שנבחרו
 ----------------------------------------------
 - Endpoint: POST /api/bookings
 - Description: Creates a new booking for a room, including selected dining and services.
@@ -160,4 +160,8 @@ Dogotel Backend API Requirements
 
 ---
 
-עבור כל חדר יהיה צריך לשמור את התאריכים שהוא לא זמין בהם. 
+9. Post request to save the booking details
+
+---
+
+10. 

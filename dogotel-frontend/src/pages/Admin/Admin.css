@@ -1,0 +1,56 @@
+.admin-page {
+  padding-top: 18vh;
+  min-height: 100vh;
+  background: #fff;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.admin-page h1 {
+  text-align: center;
+  color: #3b1d0f;
+  margin-bottom: 40px;
+}
+
+.admin-section {
+  background: #f8f2eb;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  padding: 24px 32px;
+  box-shadow: 0 2px 8px rgba(60, 31, 16, 0.06);
+  width: 900px;
+}
+
+.admin-section h2 {
+  color: #3b1d0f;
+  margin-bottom: 18px;
+}
+
+.admin-bookings-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.admin-bookings-table th,
+.admin-bookings-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5d8c7;
+  text-align: left;
+}
+
+.admin-bookings-table th {
+  background: #f8f2eb;
+  color: #3b1d0f;
+  font-weight: 700;
+}
+
+.admin-bookings-table tr:last-child td {
+  border-bottom: none;
+}
