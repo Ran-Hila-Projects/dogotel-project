@@ -6,10 +6,12 @@ import walksImage from "../../assets/images/walk-service.jpg";
 import skillImage from "../../assets/images/skill-service.jpg";
 import fitnessImage from "../../assets/images/train-service.jpg";
 import Footer from "../../components/Footer/Footer";
+import Toast from "../../components/Toast/Toast";
 
 function Services() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [added, setAdded] = useState("");
+  const [toastOpen, setToastOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -78,6 +80,7 @@ function Services() {
     // Avoid duplicates
     if (!cart.services.find((s) => s.id === service.id)) {
       cart.services.push(service);
+      setToastOpen(true);
     }
     localStorage.setItem("dogotelBooking", JSON.stringify(cart));
     setAdded(service.title);
@@ -130,6 +133,11 @@ function Services() {
         </section>
         <Footer />
       </div>
+      <Toast
+        message="Service added to cart!"
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

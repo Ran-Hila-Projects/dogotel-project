@@ -2,6 +2,7 @@ import React from "react";
 import "./Dining.css";
 import DiningCard from "../../components/DiningCard/DiningCard";
 import Footer from "../../components/Footer/Footer";
+import Toast from "../../components/Toast/Toast";
 
 // import dog meal images
 import breakfastImage from "../../assets/images/dog-breakfast.jpg";
@@ -10,6 +11,7 @@ import customImage from "../../assets/images/dog-custom-meal.jpg";
 
 function Dining() {
   const [added, setAdded] = React.useState("");
+  const [toastOpen, setToastOpen] = React.useState(false);
 
   const handleAddDining = (dining) => {
     let cart = {};
@@ -19,6 +21,7 @@ function Dining() {
     cart.dining = dining;
     localStorage.setItem("dogotelBooking", JSON.stringify(cart));
     setAdded(dining.title);
+    setToastOpen(true);
     setTimeout(() => setAdded(""), 2000);
   };
 
@@ -77,13 +80,12 @@ function Dining() {
         />
       </section>
 
-      {added && (
-        <div style={{ textAlign: "center", color: "#3b1d0f", marginTop: 20 }}>
-          Added {added} to your booking!
-        </div>
-      )}
-
       <Footer />
+      <Toast
+        message="Dining option added to cart!"
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

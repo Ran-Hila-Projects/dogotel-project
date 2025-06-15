@@ -49,7 +49,7 @@ function Cart() {
               }}
             >
               <div>
-                <b>{cart.room.roomId || "Room"}</b>
+                <b>{cart.room.roomTitle || "Room"}</b>
                 <div>
                   Dates: {cart.room.startDate} to {cart.room.endDate}
                 </div>

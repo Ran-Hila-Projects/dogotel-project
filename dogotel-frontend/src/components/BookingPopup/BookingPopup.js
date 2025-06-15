@@ -46,6 +46,7 @@ function BookingPopup({
   open,
   onClose,
   roomId,
+  roomTitle,
   onSave,
   dogsAmount = 1,
   // unavailableRanges = [], לשים את זה אחרי שמעבירים לשרת
@@ -144,6 +145,7 @@ function BookingPopup({
       endDate,
       dogs,
       roomId,
+      roomTitle,
     };
     // Add pricePerNight if possible
     if (rooms && rooms.length > 0 && roomId) {

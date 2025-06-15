@@ -8,6 +8,8 @@ import { ReactComponent as DollarIcon } from "../../assets/icons/dollar-icon.svg
 import { Link, useLocation } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
+import ReviewWritingPopup from "../../components/ReviewWritingPopup/ReviewWritingPopup";
+import Toast from "../../components/Toast/Toast";
 
 // Simulate async fetch call for room data
 async function fetchRoomDataAsync(roomId) {
@@ -90,6 +92,8 @@ function ARoom() {
   const roomId = query.get("id") || "1";
   const [roomData, setRoomData] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [showReviewPopup, setShowReviewPopup] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
 
   useEffect(() => {
     setRoomData(null);
@@ -99,6 +103,31 @@ function ARoom() {
   if (!roomData) {
     return <Loader />;
   }
+
+  // Demo: get current user (in real app, get from auth context)
+  const currentUser = { id: "user-1", name: "Hila Tsivion" };
+  // Demo: pretend we fetch user bookings for this room
+  const userBookingsForRoom = [
+    { bookingId: "b1", roomId: roomData.id, status: "completed" },
+  ];
+  // Demo: pretend we fetch user reviews for this room
+  const userHasReviewed = roomData.reviews.some(
+    (r) => r.name === currentUser.name
+  );
+  const canAddReview = userBookingsForRoom.length > 0 && !userHasReviewed;
+
+  const handleReviewSubmit = ({ stars, text }) => {
+    // In real app, POST to server
+    alert(`Review submitted: ${stars} stars, text: ${text}`);
+    setShowReviewPopup(false);
+    // Optionally, refresh reviews
+  };
+
+  const handleBookingSave = (data) => {
+    setBookingOpen(false);
+    setToastOpen(true);
+    // Optionally show a success message
+  };
 
   return (
     <div className="aroom-page">
@@ -170,6 +199,15 @@ function ARoom() {
       {/* Reviews Section */}
       <section className="reviews-section">
         <h2>Owner Reviews</h2>
+        {canAddReview && (
+          <button
+            className="add-review-btn"
+            onClick={() => setShowReviewPopup(true)}
+            style={{ marginBottom: 16 }}
+          >
+            Add a review
+          </button>
+        )}
         <div className="reviews-list">
           {roomData.reviews.map((review, index) => (
             <ReviewCard
@@ -180,13 +218,19 @@ function ARoom() {
             />
           ))}
         </div>
+        <ReviewWritingPopup
+          open={showReviewPopup}
+          onClose={() => setShowReviewPopup(false)}
+          onSubmit={handleReviewSubmit}
+        />
       </section>
       <Footer />
       <BookingPopup
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
         roomId={roomId}
-        onSave={() => setBookingOpen(false)}
+        roomTitle={roomData.title}
+        onSave={handleBookingSave}
         dogsAmount={roomData.dogsAmount || 1}
         rooms={[
           {
@@ -196,6 +240,11 @@ function ARoom() {
             dogsAllowed: roomData.dogsAmount,
           },
         ]}
+      />
+      <Toast
+        message="Room added to cart!"
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
       />
     </div>
   );

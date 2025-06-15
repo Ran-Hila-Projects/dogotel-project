@@ -9,6 +9,8 @@ import Footer from "../../components/Footer/Footer";
 import SearchForm from "../../components/SearchBox/Search";
 import { useLocation, useNavigate } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
+import Loader from "../../components/Loader/Loader";
+import Toast from "../../components/Toast/Toast";
 
 // Temporary static data
 const staticRooms = [
@@ -83,6 +85,7 @@ function Rooms() {
   const [searched, setSearched] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [toastOpen, setToastOpen] = useState(false);
 
   // Fetch rooms on mount or when cleared
   useEffect(() => {
@@ -141,9 +144,9 @@ function Rooms() {
   };
 
   const handleBookingSave = (data) => {
-    // In the future, send booking data to server
     setBookingOpen(false);
     setSelectedRoomId(null);
+    setToastOpen(true);
     // Optionally show a success message
   };
 
@@ -256,6 +259,11 @@ function Rooms() {
         open={bookingOpen}
         onClose={handleBookingClose}
         roomId={selectedRoomId}
+        roomTitle={
+          selectedRoomId
+            ? rooms.find((r) => r.id === selectedRoomId)?.title || ""
+            : ""
+        }
         onSave={handleBookingSave}
         dogsAmount={
           selectedRoomId
@@ -265,6 +273,11 @@ function Rooms() {
         rooms={rooms}
       />
       <Footer />
+      <Toast
+        message="Room added to cart!"
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }
