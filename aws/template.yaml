@@ -29,8 +29,12 @@ Globals:
         DYNAMODB_TABLE_BOOKINGS: !Ref BookingsTable
         DYNAMODB_TABLE_REVIEWS: !Ref ReviewsTable
         DYNAMODB_TABLE_USERS: !Ref UsersTable
+        DYNAMODB_TABLE_DINING: !Ref DiningTable
+        DYNAMODB_TABLE_SERVICES: !Ref ServicesTable
         COGNITO_USER_POOL_ID: !Ref UserPool
         COGNITO_CLIENT_ID: !Ref UserPoolClient
+        BOOKING_EVENTS_QUEUE_URL: !Ref BookingEventsQueue
+        BOOKING_CONFIRMATION_TOPIC_ARN: !Ref BookingConfirmationTopic
   Api:
     Cors:
       AllowMethods: "'*'"
@@ -123,6 +127,46 @@ Resources:
               KeyType: 'HASH'
           Projection:
             ProjectionType: ALL
+
+  DiningTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'dogotel-dining-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'dining_id'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'dining_id'
+          KeyType: 'HASH'
+
+  ServicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'dogotel-services-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'service_id'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'service_id'
+          KeyType: 'HASH'
+
+  # SQS Queue for booking events
+  BookingEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'dogotel-booking-events-${Environment}'
+      VisibilityTimeoutSeconds: 180
+      MessageRetentionPeriod: 1209600  # 14 days
+      ReceiveMessageWaitTimeSeconds: 20  # Long polling
+
+  # SNS Topic for booking confirmations
+  BookingConfirmationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'dogotel-booking-confirmations-${Environment}'
+      DisplayName: 'Dogotel Booking Confirmations'
 
   # Cognito User Pool
   UserPool:
@@ -284,6 +328,22 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /admin/rooms/{room_id}
             Method: delete
+        GetRoomUnavailableDates:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{room_id}/unavailable-dates
+            Method: get
+            Auth:
+              Authorizer: NONE
+        GetRoomUnavailableRanges:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{room_id}/unavailable-ranges
+            Method: get
+            Auth:
+              Authorizer: NONE
 
   BookingsFunction:
     Type: AWS::Serverless::Function
@@ -299,8 +359,8 @@ Resources:
         - Statement:
           - Effect: Allow
             Action:
-              - ses:SendEmail
-            Resource: "*"
+              - sqs:SendMessage
+            Resource: !GetAtt BookingEventsQueue.Arn
       Events:
         CreateBooking:
           Type: Api
@@ -359,6 +419,12 @@ Resources:
             Method: get
             Auth:
               Authorizer: NONE
+        CreateRoomReview:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{room_id}/reviews
+            Method: post
         CreateReview:
           Type: Api
           Properties:
@@ -389,6 +455,71 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /admin/reviews/{review_id}/moderate
             Method: put
+
+  DiningServicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dogotel-dining-services-${Environment}'
+      CodeUri: src/handlers/
+      Handler: dining_services_handler.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DiningTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ServicesTable
+      Events:
+        GetDining:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /dining/{dining_id}
+            Method: get
+            Auth:
+              Authorizer: NONE
+        GetService:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /services/{service_id}
+            Method: get
+            Auth:
+              Authorizer: NONE
+        ListDining:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /dining
+            Method: get
+            Auth:
+              Authorizer: NONE
+        ListServices:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /services
+            Method: get
+            Auth:
+              Authorizer: NONE
+
+  BookingEventProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dogotel-booking-event-processor-${Environment}'
+      CodeUri: src/handlers/
+      Handler: booking_event_processor.lambda_handler
+      Timeout: 60
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - sns:Publish
+            Resource: !Ref BookingConfirmationTopic
+      Events:
+        BookingEventsQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BookingEventsQueue.Arn
+            BatchSize: 10
 
   # Admin Functions
   AdminDashboardFunction:
@@ -499,6 +630,28 @@ Resources:
             Auth:
               Authorizer: NONE
 
+  InitializeDiningServicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dogotel-init-dining-services-${Environment}'
+      CodeUri: src/handlers/
+      Handler: init_dining_services_data.lambda_handler
+      Timeout: 120
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DiningTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ServicesTable
+      Events:
+        InitializeDiningServices:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /admin/init-dining-services
+            Method: post
+            Auth:
+              Authorizer: NONE
+
 Outputs:
   ApiUrl:
     Description: 'API Gateway endpoint URL'
@@ -534,4 +687,16 @@ Outputs:
     Description: 'AWS Region'
     Value: !Ref AWS::Region
     Export:
-      Name: !Sub '${AWS::StackName}-Region' 
+      Name: !Sub '${AWS::StackName}-Region'
+
+  BookingEventsQueueUrl:
+    Description: 'SQS Queue URL for Booking Events'
+    Value: !Ref BookingEventsQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-BookingEventsQueueUrl'
+
+  BookingConfirmationTopicArn:
+    Description: 'SNS Topic ARN for Booking Confirmations'
+    Value: !Ref BookingConfirmationTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-BookingConfirmationTopicArn' 

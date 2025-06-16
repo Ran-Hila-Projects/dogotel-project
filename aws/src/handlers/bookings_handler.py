@@ -9,11 +9,12 @@ from botocore.exceptions import ClientError
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
-ses = boto3.client('ses')
+sqs = boto3.client('sqs')
 
 # Environment variables
 BOOKINGS_TABLE = os.environ['DYNAMODB_TABLE_BOOKINGS']
 ROOMS_TABLE = os.environ['DYNAMODB_TABLE_ROOMS']
+BOOKING_EVENTS_QUEUE_URL = os.environ.get('BOOKING_EVENTS_QUEUE_URL')
 
 bookings_table = dynamodb.Table(BOOKINGS_TABLE)
 rooms_table = dynamodb.Table(ROOMS_TABLE)
@@ -58,6 +59,8 @@ def lambda_handler(event, context):
 def handle_create_booking(event):
     """Handle creating a new booking"""
     try:
+        origin = extract_origin_from_event(event)
+        
         # Get user info from JWT token
         claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
         user_email = claims.get('email')
@@ -67,16 +70,29 @@ def handle_create_booking(event):
             return cors_error_response(401, 'Unauthorized', origin)
         
         body = json.loads(event['body'])
-        required_fields = ['room_id', 'check_in', 'check_out', 'guest_count']
         
-        for field in required_fields:
-            if field not in body:
-                return cors_response(400, {'error': f'{field} is required'}, origin)
+        # Support both frontend format (roomId, startDate, endDate) and backend format
+        room_id = body.get('roomId') or body.get('room_id')
+        start_date = body.get('startDate') or body.get('check_in')
+        end_date = body.get('endDate') or body.get('check_out')
+        dogs = body.get('dogs', [])
+        dining_ids = body.get('diningId', [])
+        service_ids = body.get('serviceIds', [])
         
-        room_id = body['room_id']
-        check_in = body['check_in']
-        check_out = body['check_out']
-        guest_count = int(body['guest_count'])
+        # Validate required fields
+        if not room_id:
+            return cors_error_response(400, 'roomId is required', origin)
+        if not start_date:
+            return cors_error_response(400, 'startDate is required', origin)
+        if not end_date:
+            return cors_error_response(400, 'endDate is required', origin)
+        if not dogs:
+            return cors_error_response(400, 'dogs is required', origin)
+        
+        # Use check_in/check_out internally for consistency
+        check_in = start_date
+        check_out = end_date
+        guest_count = len(dogs)  # Calculate based on number of dogs
         
         # Validate dates
         try:
@@ -122,6 +138,9 @@ def handle_create_booking(event):
             'check_in': check_in,
             'check_out': check_out,
             'guest_count': guest_count,
+            'dogs': dogs,
+            'dining_ids': dining_ids,
+            'service_ids': service_ids,
             'total_cost': total_cost,
             'status': 'confirmed',
             'special_requests': body.get('special_requests', ''),
@@ -131,17 +150,19 @@ def handle_create_booking(event):
         
         bookings_table.put_item(Item=booking_data)
         
-        # Send confirmation email (simplified for POC)
+        # Send booking event to SQS for processing
         try:
-            send_booking_confirmation_email(user_email, user_name, booking_data, room)
+            send_booking_event_to_sqs(booking_data, room, user_email, user_name)
         except Exception as e:
-            print(f"Email sending failed: {str(e)}")
-            # Don't fail the booking if email fails
+            print(f"SQS message sending failed: {str(e)}")
+            # Don't fail the booking if SQS fails
         
         return cors_response(201, {
+                'success': True,
+                'bookingId': booking_id,
                 'message': 'Booking created successfully',
-                'booking': convert_decimals(booking_data, origin))
-        }
+                'booking': convert_decimals(booking_data)
+            }, origin)
         
     except Exception as e:
         print(f"Create booking error: {str(e)}")
@@ -166,8 +187,8 @@ def handle_get_user_bookings(event):
         
         return cors_response(200, {
                 'bookings': bookings,
-                'count': len(bookings, origin))
-        }
+                'count': len(bookings)
+            }, origin)
         
     except Exception as e:
         print(f"Get user bookings error: {str(e)}")
@@ -253,8 +274,8 @@ def handle_admin_get_all_bookings(event):
         
         return cors_response(200, {
                 'bookings': bookings,
-                'count': len(bookings, origin))
-        }
+                'count': len(bookings)
+            }, origin)
         
     except Exception as e:
         print(f"Admin get all bookings error: {str(e)}")
@@ -325,73 +346,39 @@ def is_room_available(room_id, check_in, check_out):
         print(f"Availability check error: {str(e)}")
         return False
 
-def send_booking_confirmation_email(user_email, user_name, booking, room):
-    """Send booking confirmation email using SES"""
+def send_booking_event_to_sqs(booking, room, user_email, user_name):
+    """Send booking event to SQS for processing"""
     try:
-        subject = f"Booking Confirmation - Dogotel #{booking['booking_id'][:8]}"
+        if not BOOKING_EVENTS_QUEUE_URL:
+            print("SQS queue URL not configured")
+            return
+            
+        # Create booking event message
+        booking_event = {
+            'event_type': 'booking_created',
+            'booking': convert_decimals(booking),
+            'room': convert_decimals(room),
+            'user_email': user_email,
+            'user_name': user_name,
+            'timestamp': datetime.utcnow().isoformat()
+        }
         
-        # Create email body
-        body_text = f"""
-Dear {user_name},
-
-Your booking has been confirmed!
-
-Booking Details:
-- Booking ID: {booking['booking_id']}
-- Room: {room.get('name', 'Room')}
-- Check-in: {booking['check_in']}
-- Check-out: {booking['check_out']}
-- Guests: {booking['guest_count']}
-- Total Cost: ${float(booking['total_cost']):.2f}
-
-Thank you for choosing Dogotel!
-
-Best regards,
-The Dogotel Team
-        """
+        # Send message to SQS
+        response = sqs.send_message(
+            QueueUrl=BOOKING_EVENTS_QUEUE_URL,
+            MessageBody=json.dumps(booking_event),
+            MessageAttributes={
+                'event_type': {
+                    'StringValue': 'booking_created',
+                    'DataType': 'String'
+                }
+            }
+        )
         
-        body_html = f"""
-<html>
-<head></head>
-<body>
-    <h2>Booking Confirmation</h2>
-    <p>Dear {user_name},</p>
-    <p>Your booking has been confirmed!</p>
-    
-    <h3>Booking Details:</h3>
-    <ul>
-        <li><strong>Booking ID:</strong> {booking['booking_id']}</li>
-        <li><strong>Room:</strong> {room.get('name', 'Room')}</li>
-        <li><strong>Check-in:</strong> {booking['check_in']}</li>
-        <li><strong>Check-out:</strong> {booking['check_out']}</li>
-        <li><strong>Guests:</strong> {booking['guest_count']}</li>
-        <li><strong>Total Cost:</strong> ${float(booking['total_cost']):.2f}</li>
-    </ul>
-    
-    <p>Thank you for choosing Dogotel!</p>
-    <p>Best regards,<br>The Dogotel Team</p>
-</body>
-</html>
-        """
-        
-        # Note: In a real implementation, you would need to verify the sender email with SES
-        # For POC purposes, this is commented out to avoid SES setup issues
-        # ses.send_email(
-        #     Source='noreply@dogotel.com',  # This needs to be verified in SES
-        #     Destination={'ToAddresses': [user_email]},
-        #     Message={
-        #         'Subject': {'Data': subject},
-        #         'Body': {
-        #             'Text': {'Data': body_text},
-        #             'Html': {'Data': body_html}
-        #         }
-        #     }
-        # )
-        
-        print(f"Email would be sent to {user_email}: {subject}")
+        print(f"Booking event sent to SQS. MessageId: {response['MessageId']}")
         
     except Exception as e:
-        print(f"Email error: {str(e)}")
+        print(f"Error sending booking event to SQS: {str(e)}")
         raise
 
 def is_admin(event):

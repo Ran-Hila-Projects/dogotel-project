@@ -36,6 +36,10 @@ def lambda_handler(event, context):
             # /rooms/{room_id}/reviews
             room_id = path.split('/')[-2]
             return handle_get_room_reviews(room_id, event)
+        elif path.startswith('/rooms/') and path.endswith('/reviews') and http_method == 'POST':
+            # /rooms/{room_id}/reviews
+            room_id = path.split('/')[-2]
+            return handle_create_review_for_room(room_id, event)
         elif path == '/reviews' and http_method == 'POST':
             return handle_create_review(event)
         elif path.startswith('/reviews/') and path.count('/') == 2 and http_method == 'PUT':
@@ -82,8 +86,8 @@ def handle_get_room_reviews(room_id, event):
         return cors_response(200, {
                 'reviews': reviews,
                 'count': len(reviews),
-                'average_rating': round(average_rating, 2, origin))
-        }
+                'average_rating': round(average_rating, 2)
+            }, origin)
         
     except Exception as e:
         print(f"Get room reviews error: {str(e)}")
@@ -164,11 +168,103 @@ def handle_create_review(event):
         
         return cors_response(201, {
                 'message': 'Review created successfully',
-                'review': convert_decimals(review_data, origin))
-        }
+                'review': convert_decimals(review_data)
+            }, origin)
         
     except Exception as e:
         print(f"Create review error: {str(e)}")
+        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+
+def handle_create_review_for_room(room_id, event):
+    """Handle creating a review for a specific room (from frontend)"""
+    try:
+        origin = extract_origin_from_event(event)
+        
+        # Get user info from JWT token
+        claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
+        user_email = claims.get('email')
+        user_name = claims.get('name', 'User')
+        
+        if not user_email:
+            return cors_error_response(401, 'Unauthorized', origin)
+        
+        body = json.loads(event['body'])
+        
+        # Support frontend format (stars, review) and backend format (rating, comment)
+        rating = body.get('stars') or body.get('rating')
+        comment = body.get('review') or body.get('comment')
+        
+        # Validate required fields
+        if not rating:
+            return cors_error_response(400, 'stars/rating is required', origin)
+        if not comment:
+            return cors_error_response(400, 'review/comment is required', origin)
+        
+        rating = int(rating)
+        
+        # Validate rating
+        if rating < 1 or rating > 5:
+            return cors_error_response(400, 'Rating must be between 1 and 5', origin)
+        
+        # Check if user has a completed booking for this room
+        booking_response = bookings_table.query(
+            IndexName='UserBookingsIndex',
+            KeyConditionExpression='user_id = :user_id',
+            FilterExpression='room_id = :room_id AND #status IN (:completed, :checked_out)',
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':user_id': user_email,
+                ':room_id': room_id,
+                ':completed': 'completed',
+                ':checked_out': 'checked_out'
+            }
+        )
+        
+        if not booking_response['Items']:
+            return cors_error_response(403, 'You must have a completed booking for this room to leave a review', origin)
+        
+        # Use the most recent completed booking
+        completed_booking = sorted(booking_response['Items'], key=lambda x: x['created_at'], reverse=True)[0]
+        booking_id = completed_booking['booking_id']
+        
+        # Check if user already reviewed this room
+        existing_reviews = reviews_table.scan(
+            FilterExpression='room_id = :room_id AND user_id = :user_id',
+            ExpressionAttributeValues={
+                ':room_id': room_id,
+                ':user_id': user_email
+            }
+        )
+        
+        if existing_reviews['Items']:
+            return cors_error_response(400, 'You have already reviewed this room', origin)
+        
+        # Create review
+        review_id = str(uuid.uuid4())
+        review_data = {
+            'review_id': review_id,
+            'room_id': room_id,
+            'booking_id': booking_id,
+            'user_id': user_email,
+            'user_name': user_name,
+            'rating': rating,
+            'comment': comment,
+            'status': 'approved',  # Auto-approve for POC
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        reviews_table.put_item(Item=review_data)
+        
+        return cors_response(201, {
+                'success': True,
+                'reviewId': review_id,
+                'message': 'Review created successfully',
+                'review': convert_decimals(review_data)
+            }, origin)
+        
+    except Exception as e:
+        print(f"Create review for room error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_update_review(review_id, event):
@@ -285,8 +381,8 @@ def handle_admin_get_all_reviews(event):
         
         return cors_response(200, {
                 'reviews': reviews,
-                'count': len(reviews, origin))
-        }
+                'count': len(reviews)
+            }, origin)
         
     except Exception as e:
         print(f"Admin get all reviews error: {str(e)}")

@@ -37,6 +37,12 @@ def lambda_handler(event, context):
         elif path.startswith('/rooms/') and path.count('/') == 2 and http_method == 'GET':
             room_id = path.split('/')[-1]
             return handle_get_room(room_id, event)
+        elif path.startswith('/rooms/') and path.endswith('/unavailable-dates') and http_method == 'GET':
+            room_id = path.split('/')[-2]
+            return handle_get_unavailable_dates(room_id, event)
+        elif path.startswith('/rooms/') and path.endswith('/unavailable-ranges') and http_method == 'GET':
+            room_id = path.split('/')[-2]
+            return handle_get_unavailable_ranges(room_id, event)
         elif path == '/admin/rooms' and http_method == 'POST':
             return handle_create_room(event)
         elif path.startswith('/admin/rooms/') and http_method == 'PUT':
@@ -55,6 +61,7 @@ def lambda_handler(event, context):
 def handle_list_rooms(event):
     """Handle listing all rooms with optional filters"""
     try:
+        origin = extract_origin_from_event(event)
         query_params = event.get('queryStringParameters') or {}
         min_price = query_params.get('min_price')
         max_price = query_params.get('max_price')
@@ -84,14 +91,14 @@ def handle_list_rooms(event):
                 if not is_room_available(room['room_id'], check_in, check_out):
                     continue
             
-            # Convert Decimal to float for JSON serialization
-            room_copy = convert_decimals(room)
+            # Convert Decimal to float for JSON serialization and transform to frontend format
+            room_copy = transform_room_for_frontend(convert_decimals(room))
             filtered_rooms.append(room_copy)
         
         return cors_response(200, {
                 'rooms': filtered_rooms,
-                'count': len(filtered_rooms, origin))
-        }
+                'count': len(filtered_rooms)
+            }, origin)
         
     except Exception as e:
         print(f"List rooms error: {str(e)}")
@@ -100,17 +107,103 @@ def handle_list_rooms(event):
 def handle_get_room(room_id, event):
     """Handle getting a specific room"""
     try:
+        origin = extract_origin_from_event(event)
+        
         response = rooms_table.get_item(Key={'room_id': room_id})
         
         if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
+            return cors_error_response(404, 'Room not found', origin)
         
-        room = convert_decimals(response['Item'])
+        room = transform_room_for_frontend(convert_decimals(response['Item']))
         
         return cors_response(200, room, origin)
         
     except Exception as e:
         print(f"Get room error: {str(e)}")
+        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+
+def handle_get_unavailable_dates(room_id, event):
+    """Handle getting unavailable dates for a specific room"""
+    try:
+        origin = extract_origin_from_event(event)
+        
+        # Get all confirmed bookings for this room
+        response = bookings_table.query(
+            IndexName='RoomBookingsIndex',
+            KeyConditionExpression='room_id = :room_id',
+            FilterExpression='#status IN (:confirmed, :checked_in)',
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':room_id': room_id,
+                ':confirmed': 'confirmed',
+                ':checked_in': 'checked_in'
+            }
+        )
+        
+        unavailable_dates = []
+        for booking in response['Items']:
+            # Generate all dates between check_in and check_out
+            check_in = datetime.fromisoformat(booking['check_in'].replace('Z', '+00:00'))
+            check_out = datetime.fromisoformat(booking['check_out'].replace('Z', '+00:00'))
+            
+            current_date = check_in.date()
+            end_date = check_out.date()
+            
+            while current_date < end_date:  # Don't include checkout date
+                unavailable_dates.append(current_date.isoformat())
+                current_date += timedelta(days=1)
+        
+        return cors_response(200, {
+            'roomId': room_id,
+            'unavailableDates': sorted(list(set(unavailable_dates)))
+        }, origin)
+        
+    except Exception as e:
+        print(f"Get unavailable dates error: {str(e)}")
+        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+
+def handle_get_unavailable_ranges(room_id, event):
+    """Handle getting unavailable date ranges for a specific room"""
+    try:
+        origin = extract_origin_from_event(event)
+        
+        # Get all confirmed bookings for this room
+        response = bookings_table.query(
+            IndexName='RoomBookingsIndex',
+            KeyConditionExpression='room_id = :room_id',
+            FilterExpression='#status IN (:confirmed, :checked_in)',
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':room_id': room_id,
+                ':confirmed': 'confirmed',
+                ':checked_in': 'checked_in'
+            }
+        )
+        
+        unavailable_ranges = []
+        for booking in response['Items']:
+            check_in = booking['check_in']
+            check_out = booking['check_out']
+            
+            # Convert to date format for ranges
+            check_in_date = datetime.fromisoformat(check_in.replace('Z', '+00:00')).date()
+            check_out_date = datetime.fromisoformat(check_out.replace('Z', '+00:00')).date()
+            
+            # Adjust checkout date (booking ends day before checkout)
+            actual_end_date = check_out_date - timedelta(days=1)
+            
+            unavailable_ranges.append({
+                'start': check_in_date.isoformat(),
+                'end': actual_end_date.isoformat()
+            })
+        
+        return cors_response(200, {
+            'roomId': room_id,
+            'unavailableRanges': unavailable_ranges
+        }, origin)
+        
+    except Exception as e:
+        print(f"Get unavailable ranges error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_create_room(event):
@@ -146,8 +239,8 @@ def handle_create_room(event):
         
         return cors_response(201, {
                 'message': 'Room created successfully',
-                'room': convert_decimals(room_data, origin))
-        }
+                'room': convert_decimals(room_data)
+            }, origin)
         
     except Exception as e:
         print(f"Create room error: {str(e)}")
@@ -270,6 +363,24 @@ def is_admin(event):
         return role == 'ADMIN'
     except:
         return False
+
+def transform_room_for_frontend(room):
+    """Transform room data to match frontend expectations from Ran_dev.txt"""
+    return {
+        'id': room.get('room_id'),
+        'title': room.get('name'),
+        'subtitle': room.get('subtitle', ''),
+        'description': room.get('description'),
+        'dogsAllowed': room.get('capacity', 1),
+        'size': room.get('size'),
+        'price': room.get('price_per_night'),
+        'pricePerNight': room.get('price_per_night'),
+        'imageUrl': room.get('images', ['/rooms-images/default.jpg'])[0] if room.get('images') else '/rooms-images/default.jpg',
+        'features': room.get('amenities', []),
+        'included': room.get('included', []),
+        'reviews': room.get('reviews', []),
+        'is_available': room.get('is_available', True)
+    }
 
 def convert_decimals(obj):
     """Convert Decimal objects to float for JSON serialization"""
