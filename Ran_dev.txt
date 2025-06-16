@@ -4,19 +4,25 @@ Dogotel Backend API Requirements
 1. Get All Rooms
 ----------------
 - Endpoint: GET /api/rooms
-- Description: Returns a list of all rooms with all relevant data for the rooms page.
+- Description: Returns a list of all room objects for management purposes.
 - Response Example:
-  [
-    {
-      "id": "cozy-kennel",
-      "title": "The Cozy Kennel",
-      "description": "Perfect for solo nappers...",
-      "dogsAllowed": 1,
-      "pricePerNight": 55,
-      "imageUrl": "/rooms-images/room-1.jpg"
-    },
-    ...
-  ]
+[
+  {
+    "id": "1",
+    "title": "The Cozy Kennel",
+    "subtitle": "Perfect for Solo Nappers 💤",
+    "description": "A quiet, comfy room...",
+    "dogsAmount": 1,
+    "price": 55,
+    "size": "30m²",
+    "image": "data:image/jpeg;base64,...",
+    "reviews": [
+      { "name": "Hila", "stars": 5, "review": "..." }
+    ]
+  },
+  ...
+]
+
 
 ---
 
@@ -161,7 +167,133 @@ Dogotel Backend API Requirements
 ---
 
 9. Post request to save the booking details
+----------------------------------
+- Endpoint: POST /api/bookings
+- Description: Saves a new booking, including room, dining, services, dog details, and total price.
+- Request Body Example:
+{
+  "userEmail": "user1@example.com",
+  "room": {
+    "roomId": "3",
+    "roomTitle": "Garden Sniff Suite",
+    "startDate": "2025-07-10",
+    "endDate": "2025-07-14",
+    "pricePerNight": 65,
+    "dogs": [
+      {
+        "name": "Bella",
+        "breed": "Golden Retriever",
+        "age": 3,
+        "notes": "Loves cuddles"
+      }
+    ]
+  },
+  "dining": {
+    "id": "d1",
+    "title": "Premium Meal Plan",
+    "price": 30
+  },
+  "services": [
+    {
+      "id": "s1",
+      "title": "Grooming",
+      "price": 25
+    },
+    {
+      "id": "s2",
+      "title": "Extra Walks",
+      "price": 15
+    }
+  ],
+  "totalPrice": 320
+}
+- Success Response Example:
+{
+  "success": true,
+  "bookingId": "b789",
+  "message": "Booking saved successfully"
+}
+- Error Response Example:
+{
+  "success": false,
+  "error": "Room is not available for the selected dates"
+}
 
 ---
 
-10. 
+10. Create a New Room
+-----------------------------------
+- Endpoint: POST /api/rooms
+- Description: Adds a new room with the given data.
+- Request Body:
+{
+  "title": "Family Fur Cabin",
+  "subtitle": "Perfect for Pupper Parties 🐾🎉",
+  "description": "Perfect for 3 furry siblings...",
+  "dogsAmount": 3,
+  "price": 100,
+  "size": "60m²",
+  "image": "data:image/jpeg;base64,...",  // base64 or image URL
+  "reviews": []
+}
+- Response Example:
+{
+  "success": true,
+  "id": "6" // newly created room ID
+}
+
+---
+
+11. Update Room Details
+-----------------------------------
+- Endpoint: PUT /api/rooms/:id
+- Description: Updates an existing room by ID.
+- Request Body:
+{
+  "title": "Updated Title",
+  "subtitle": "Updated Type",
+  "description": "Updated desc...",
+  "dogsAmount": 2,
+  "price": 90,
+  "size": "45m²",
+  "image": "data:image/jpeg;base64,..."
+}
+- Response Example:
+{
+  "success": true
+}
+
+---
+
+12. Delete Room
+-------------------------
+- Endpoint: DELETE /api/rooms/:id
+- Description: Deletes the room by its ID.
+- Response Example:
+{
+  "success": true
+}
+
+---
+
+13. Get Bookings
+-------------------------
+- Endpoint: GET /api/bookings
+- Description: Returns all user bookings sorted by creation date.
+- Response Example:
+[
+  {
+    "bookingId": "b3",
+    "user": "user2@example.com",
+    "room": "Deluxe Duo Den",
+    "dogs": ["Max"],
+    "startDate": "2025-07-10",
+    "endDate": "2025-07-13",
+    "createdAt": "2025-06-01T12:30:00Z"
+  },
+  ...
+]
+ 
+---
+
+14. 
