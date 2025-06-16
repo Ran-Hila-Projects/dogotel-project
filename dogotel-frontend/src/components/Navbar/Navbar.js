@@ -35,7 +35,9 @@ function Navbar({ isLoggedIn, userName, onLogout }) {
           {isLoggedIn ? (
             <>
               <div className="user-info">
-                <span className="user-avatar">{getInitials(userName)}</span>
+                <Link to="/profile" className="user-avatar">
+                  {getInitials(userName)}
+                </Link>
                 <Link to="/cart" className="cart-icon">
                   <ShoppingCart />
                 </Link>

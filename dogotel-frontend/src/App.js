@@ -10,6 +10,7 @@ import ARoomPage from "./pages/ARoom/ARoom";
 import CartPage from "./pages/Cart/Cart";
 import NotFound from "./404";
 import AdminPage from "./pages/Admin/Admin";
+import ProfilePage from "./pages/Profile/Profile";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -35,6 +36,7 @@ function App() {
           <Route path="/aroom" element={<ARoomPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/admin" element={<AdminPage userName={userName} />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
