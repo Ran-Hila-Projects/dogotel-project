@@ -1,72 +1,19 @@
 import React, { useState, useEffect } from "react";
 import "./Rooms.css";
-import room1 from "../../assets/rooms-images/room-1.jpg";
-import room2 from "../../assets/rooms-images/room-2.png";
-import room3 from "../../assets/rooms-images/room-3.png";
-import room4 from "../../assets/rooms-images/room-4.png";
-import room5 from "../../assets/rooms-images/room-5.png";
 import Footer from "../../components/Footer/Footer";
 import SearchForm from "../../components/SearchBox/Search";
 import { useLocation, useNavigate } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import Toast from "../../components/Toast/Toast";
-
-// Temporary static data
-const staticRooms = [
-  {
-    id: "1",
-    title: "The Cozy Kennel",
-    description:
-      "Perfect for solo nappers. A quiet, comfy room for solo travelers. Includes a cozy bed, chew toys, and a snuggly blanket.",
-    dogsAllowed: 1,
-    pricePerNight: 55,
-    imagePath: room1,
-  },
-  {
-    id: "2",
-    title: "Deluxe Duo Den",
-    description:
-      "Spacious and luxurious suite for two dogs. Great for siblings or best friends. Comes with two beds and extra treats.",
-    dogsAllowed: 2,
-    pricePerNight: 80,
-    imagePath: room2,
-  },
-  {
-    id: "3",
-    title: "Garden Sniff Suite",
-    description:
-      "A sunny room with direct access to our sniff-friendly garden. Ideal for active pups who love fresh grass and fresh air.",
-    dogsAllowed: 1,
-    pricePerNight: 65,
-    imagePath: room3,
-  },
-  {
-    id: "4",
-    title: "Spa Paws Retreat",
-    description:
-      "A calm, luxury suite for pampered pups. Includes spa-scented bedding and daily relaxation music.",
-    dogsAllowed: 1,
-    pricePerNight: 90,
-    imagePath: room4,
-  },
-  {
-    id: "5",
-    title: "Family Fur Cabin",
-    description:
-      "Perfect for 3 furry siblings – or a party! A wide room with space to run, jump and nap together.",
-    dogsAllowed: 3,
-    pricePerNight: 100,
-    imagePath: room5,
-  },
-];
+import rooms from "../../data/rooms";
 
 // Future: fetch from AWS DynamoDB
 async function fetchRooms() {
   // In the future, fetch from server
   // const response = await fetch('/api/rooms');
   // return await response.json();
-  return staticRooms;
+  return Object.values(rooms);
 }
 
 function useQuery() {
@@ -99,7 +46,7 @@ function Rooms() {
     if (searched) {
       // Filter rooms by dogsAllowed (exact match)
       const filtered = rooms.filter(
-        (room) => room.dogsAllowed === parseInt(dogs)
+        (room) => room.dogsAmount === parseInt(dogs)
       );
       setFilteredRooms(filtered);
     } else {
@@ -234,8 +181,8 @@ function Rooms() {
                 <p className="room-description">{room.description}</p>
                 <div className="room-info-and-btn">
                   <div className="room-info">
-                    <span>🐕 Dogs Allowed: {room.dogsAllowed}</span>
-                    <span>💲 {room.pricePerNight} / night</span>
+                    <span>🐕 Dogs Allowed: {room.dogsAmount}</span>
+                    <span>💲 {room.price} / night</span>
                   </div>
                   <button
                     className="book-btn"
@@ -247,7 +194,7 @@ function Rooms() {
               </div>
               <img
                 className="room-image"
-                src={room.imagePath}
+                src={room.image}
                 alt={room.title}
                 onError={(e) => (e.target.style.display = "none")}
               />
@@ -267,7 +214,7 @@ function Rooms() {
         onSave={handleBookingSave}
         dogsAmount={
           selectedRoomId
-            ? rooms.find((r) => r.id === selectedRoomId)?.dogsAllowed || 1
+            ? rooms.find((r) => r.id === selectedRoomId)?.dogsAmount || 1
             : 1
         }
         rooms={rooms}

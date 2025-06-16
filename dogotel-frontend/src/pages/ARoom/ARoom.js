@@ -10,76 +10,13 @@ import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import ReviewWritingPopup from "../../components/ReviewWritingPopup/ReviewWritingPopup";
 import Toast from "../../components/Toast/Toast";
+import rooms from "../../data/rooms";
 
 // Simulate async fetch call for room data
 async function fetchRoomDataAsync(roomId) {
   // Simulate network delay
   await new Promise((res) => setTimeout(res, 300));
-  // Demo data (could be replaced with real fetch)
-  const rooms = {
-    1: {
-      id: "1",
-      title: "The Cozy Kennel",
-      subtitle: "Perfect for Solo Nappers 💤",
-      description:
-        "A quiet, comfy room perfect for solo travelers. Includes a cozy bed, chew toys, and a snuggly blanket. Tail-wagging guaranteed.",
-      dogsAmount: 1,
-      size: "30m²",
-      price: 55,
-      image: require("../../assets/rooms-images/room-1.jpg"),
-      included: [
-        "Daily housekeeping (we pick up the poop 💩",
-        "Soft orthopedic bed",
-        "Water & food bowls (refilled daily!)",
-        "Chew toys & squeaky duck for late-night conversations",
-        "Fresh air window view",
-        "Private potty area",
-      ],
-      reviews: [
-        {
-          name: "Hila Tsivion",
-          stars: 5,
-          review: "Amazing experience! My dog loved it!",
-        },
-        {
-          name: "Ran Meshulam",
-          stars: 4,
-          review: "Great care, cozy room. Would book again!",
-        },
-        {
-          name: "Adi Cohen",
-          stars: 5,
-          review: "They treated my pup like royalty.",
-        },
-      ],
-    },
-    2: {
-      id: "2",
-      title: "Deluxe Duo Den",
-      subtitle: "For Active Explorers 🐕‍🦺",
-      description:
-        "Spacious and luxurious suite for two dogs. Great for siblings or best friends. Comes with two beds and extra treats.",
-      dogsAmount: 2,
-      size: "50m²",
-      price: 80,
-      image: require("../../assets/rooms-images/room-2.png"),
-      included: [
-        "Private play area",
-        "Water fountain for hydration",
-        "Daily playtime with staff",
-        "Sunlit windows",
-        "Memory foam beds",
-      ],
-      reviews: [
-        { name: "Maya Levi", stars: 5, review: "My dog loved the play area!" },
-        {
-          name: "Nadav Ben Ami",
-          stars: 5,
-          review: "Perfect for active dogs, lots of space.",
-        },
-      ],
-    },
-  };
+  // Use the imported rooms data
   return rooms[roomId] || null;
 }
 
