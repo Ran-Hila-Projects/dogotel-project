@@ -33,20 +33,49 @@ const demoBookings = [
   },
 ];
 
-function AddRoomPopup({ open, onClose, onSubmit }) {
-  const [form, setForm] = useState({
-    name: "",
-    type: "",
-    description: "",
-    capacity: 1,
-    pricePerNight: 0,
-    image: "",
-  });
+function AddRoomPopup({ open, onClose, onSubmit, initialData, isEdit }) {
+  const [form, setForm] = useState(
+    initialData || {
+      name: "",
+      type: "",
+      description: "",
+      capacity: 1,
+      pricePerNight: 0,
+      image: "",
+      size: "",
+    }
+  );
+  useEffect(() => {
+    if (initialData && isEdit) {
+      setForm({
+        name: initialData.title || "",
+        type: initialData.subtitle || "",
+        description: initialData.description || "",
+        capacity: initialData.dogsAmount || 1,
+        pricePerNight: initialData.price || 0,
+        image: initialData.image || "",
+        size: initialData.size || "",
+      });
+    }
+  }, [initialData, isEdit]);
+
   if (!open) return null;
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((f) => ({ ...f, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(form);
@@ -57,6 +86,7 @@ function AddRoomPopup({ open, onClose, onSubmit }) {
       capacity: 1,
       pricePerNight: 0,
       image: "",
+      size: "",
     });
   };
   return (
@@ -65,7 +95,7 @@ function AddRoomPopup({ open, onClose, onSubmit }) {
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <h2>Add New Room</h2>
+        <h2>{isEdit ? "Update Room Details" : "Add New Room"}</h2>
         <form onSubmit={handleSubmit} className="admin-room-form">
           <label>
             Name:
@@ -117,18 +147,52 @@ function AddRoomPopup({ open, onClose, onSubmit }) {
             />
           </label>
           <label>
-            Image URL:
+            Size of the room:
             <input
-              name="image"
-              value={form.image}
+              name="size"
+              value={form.size}
               onChange={handleChange}
               required
             />
           </label>
+          <label>
+            Image:
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              required
+            />
+          </label>
           <button type="submit" className="submit-btn">
-            Add Room
+            {isEdit ? "Update Details" : "Add Room"}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmationPopup({ open, onClose, onConfirm }) {
+  if (!open) return null;
+  return (
+    <div className="admin-popup-overlay">
+      <div className="admin-popup">
+        <button className="close-btn" onClick={onClose}>
+          &times;
+        </button>
+        <h2>Confirm Delete</h2>
+        <p>Are you sure you want to delete this room?</p>
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}
+        >
+          <button onClick={onClose} className="cancel-btn">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="delete-btn">
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -139,6 +203,9 @@ function Admin({ userName }) {
   const [rooms, setRooms] = useState([]);
   const [tab, setTab] = useState("bookings");
   const [addRoomOpen, setAddRoomOpen] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [isEdit, setIsEdit] = useState(false);
 
   useEffect(() => {
     setBookings(
@@ -150,11 +217,46 @@ function Admin({ userName }) {
   }, []);
 
   const handleAddRoom = (room) => {
-    setRooms((prev) => [
-      { ...room, id: (prev.length + 1).toString(), reviewCount: 0 },
-      ...prev,
-    ]);
+    const newRoom = {
+      id: (rooms.length + 1).toString(),
+      title: room.name,
+      subtitle: room.type,
+      description: room.description,
+      dogsAmount: room.capacity,
+      price: room.pricePerNight,
+      image: room.image,
+      size: room.size,
+      reviews: [],
+    };
+
+    if (isEdit && selectedRoom) {
+      setRooms((prev) =>
+        prev.map((r) => (r.id === selectedRoom.id ? { ...r, ...newRoom } : r))
+      );
+    } else {
+      setRooms((prev) => [newRoom, ...prev]);
+    }
+
     setAddRoomOpen(false);
+    setSelectedRoom(null);
+    setIsEdit(false);
+  };
+
+  const handleEditRoom = (room) => {
+    setSelectedRoom(room);
+    setIsEdit(true);
+    setAddRoomOpen(true);
+  };
+
+  const handleDeleteRoom = (room) => {
+    setSelectedRoom(room);
+    setDeleteConfirmationOpen(true);
+  };
+
+  const confirmDelete = () => {
+    setRooms((prev) => prev.filter((r) => r.id !== selectedRoom.id));
+    setDeleteConfirmationOpen(false);
+    setSelectedRoom(null);
   };
 
   if (userName !== "admin") {
@@ -240,7 +342,9 @@ function Admin({ userName }) {
                 <th>Description</th>
                 <th>Capacity</th>
                 <th>Price/Night</th>
+                <th>Size</th>
                 <th>Reviews</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -248,8 +352,8 @@ function Admin({ userName }) {
                 <tr key={room.id}>
                   <td>
                     <img
-                      src={room.image}
-                      alt={room.title}
+                      src={room.image || "https://via.placeholder.com/60"}
+                      alt={room.title || "room"}
                       style={{ width: 60, borderRadius: 8 }}
                     />
                   </td>
@@ -258,15 +362,41 @@ function Admin({ userName }) {
                   <td>{room.description}</td>
                   <td>{room.dogsAmount}</td>
                   <td>${room.price}</td>
-                  <td>{room.reviews.length}</td>
+                  <td>{room.size}</td>
+                  <td>{room.reviews?.length || 0}</td>
+                  <td>
+                    <button
+                      onClick={() => handleEditRoom(room)}
+                      className="edit-btn"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRoom(room)}
+                      className="delete-btn"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <AddRoomPopup
             open={addRoomOpen}
-            onClose={() => setAddRoomOpen(false)}
+            onClose={() => {
+              setAddRoomOpen(false);
+              setSelectedRoom(null);
+              setIsEdit(false);
+            }}
             onSubmit={handleAddRoom}
+            initialData={selectedRoom}
+            isEdit={isEdit}
+          />
+          <DeleteConfirmationPopup
+            open={deleteConfirmationOpen}
+            onClose={() => setDeleteConfirmationOpen(false)}
+            onConfirm={confirmDelete}
           />
         </section>
       )}
