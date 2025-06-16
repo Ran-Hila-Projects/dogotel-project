@@ -296,4 +296,60 @@ Dogotel Backend API Requirements
  
 ---
 
-14. 
+14. Get User Profile
+-------------------------
+- Endpoint: GET /api/user/:email
+- Description: Returns user profile information for the given email address.
+- Request Params:
+    :email — the email address of the logged-in user.
+- Success Response Example:
+{
+  "success": true,
+  "user": {
+    "username": "John Doe",
+    "birthdate": "1990-01-01",
+    "email": "john.doe@example.com",
+    "photo": "https://via.placeholder.com/150"
+  }
+}
+- Error Response Example:
+{
+  "success": false,
+  "error": "User not found"
+}
+
+---
+
+15. Get Booking History
+-------------------------
+- Endpoint: GET /api/bookings/:email
+- Description: Returns a list of all bookings made by the given user (identified by email).
+- Request Params:
+    :email — the email address of the user.
+- Success Response Example:
+{
+  "success": true,
+  "history": [
+    {
+      "bookingNumber": "B001",
+      "dates": "2025-06-15 to 2025-06-18",
+      "dogs": ["Rocky"],
+      "diningSelection": "Premium",
+      "servicesSelection": "Grooming",
+      "totalPrice": 250
+    },
+    {
+      "bookingNumber": "B002",
+      "dates": "2025-07-10 to 2025-07-13",
+      "dogs": ["Max"],
+      "diningSelection": "Standard",
+      "servicesSelection": "Training",
+      "totalPrice": 300
+    }
+  ]
+}
+- Error Response Example:
+{
+  "success": false,
+  "error": "No bookings found for this user"
+}
