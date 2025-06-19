@@ -53,22 +53,32 @@ def lambda_handler(event, context):
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_create_booking(event):
-    """Handle creating a new booking"""
+    """Handle creating a new booking - matches frontend cart format"""
     try:
         origin = extract_origin_from_event(event)
         
-        # Use the userEmail from the request body (no JWT required for this endpoint)
-        # Get user info if available from JWT token for additional validation
-        claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
-        jwt_user_email = claims.get('email')
-        user_name = claims.get('name', 'User')
-        
         body = json.loads(event['body'])
         
-        # Support the exact format from Ran_dev.txt
+        # Frontend cart format:
+        # {
+        #   userEmail: "user@example.com",  // Added by frontend before submitting
+        #   room: {
+        #     startDate: "2024-01-01",
+        #     endDate: "2024-01-03", 
+        #     dogs: [{name: "Buddy", breed: "Golden", age: "3", notes: ""}],
+        #     roomId: "1",
+        #     roomTitle: "The Cozy Kennel",
+        #     pricePerNight: 55
+        #   },
+        #   dining: {title: "Breakfast", price: 15},
+        #   services: [{title: "Walking", price: 20}],
+        #   totalPrice: 145  // Calculated by frontend
+        # }
+        
+        # Extract data from cart format
         user_email = body.get('userEmail')
         room_data = body.get('room', {})
-        dining_data = body.get('dining', {})
+        dining_data = body.get('dining')
         services_data = body.get('services', [])
         total_price = body.get('totalPrice')
         
@@ -92,15 +102,10 @@ def handle_create_booking(event):
         if not dogs:
             return cors_error_response(400, 'room.dogs is required', origin)
         
-        # Use internal format for availability checking
-        check_in = start_date
-        check_out = end_date
-        guest_count = len(dogs)
-        
         # Validate dates
         try:
-            check_in_date = datetime.fromisoformat(check_in.replace('Z', '+00:00'))
-            check_out_date = datetime.fromisoformat(check_out.replace('Z', '+00:00'))
+            check_in_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            check_out_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             
             if check_in_date >= check_out_date:
                 return cors_error_response(400, 'Check-out must be after check-in', origin)
@@ -114,39 +119,29 @@ def handle_create_booking(event):
         # Check if room exists and is available
         room_response = rooms_table.get_item(Key={'room_id': room_id})
         if 'Item' not in room_response:
-            return cors_error_response(404, 'Endpoint not found', origin)
+            return cors_error_response(404, 'Room not found', origin)
         
         room = room_response['Item']
         
-        if not room.get('is_available', False):
+        if not room.get('is_available', True):
             return cors_error_response(400, 'Room is not available', origin)
         
-        if guest_count > room.get('capacity', 1):
-            return cors_error_response(400, 'Guest count exceeds room capacity', origin)
+        guest_count = len(dogs)
+        if guest_count > room.get('dogsAmount', 1):
+            return cors_error_response(400, 'Dog count exceeds room capacity', origin)
         
         # Check availability for the dates
-        if not is_room_available(room_id, check_in, check_out):
+        if not is_room_available(room_id, start_date, end_date):
             return cors_error_response(400, 'Room is not available for selected dates', origin)
         
-        # Calculate total cost
-        nights = (check_out_date - check_in_date).days
-        total_cost = Decimal(str(float(room['price_per_night']) * nights))
-        
-        # Create booking - exact format from Ran_dev.txt
+        # Create booking with exact cart format
         booking_id = str(uuid.uuid4())
         booking_data = {
             'bookingId': booking_id,
             'userEmail': user_email,
-            'room': {
-                'roomId': room_id,
-                'roomTitle': room_title,
-                'startDate': start_date,
-                'endDate': end_date,
-                'pricePerNight': price_per_night,
-                'dogs': dogs
-            },
-            'dining': dining_data if dining_data else None,
-            'services': services_data if services_data else [],
+            'room': room_data,
+            'dining': dining_data,
+            'services': services_data,
             'totalPrice': total_price,
             'status': 'confirmed',
             'createdAt': datetime.utcnow().isoformat(),
@@ -157,7 +152,7 @@ def handle_create_booking(event):
         
         # Send booking event to SQS for processing
         try:
-            send_booking_event_to_sqs(booking_data, room, user_email, user_name)
+            send_booking_event_to_sqs(booking_data, room, user_email, "User")
         except Exception as e:
             print(f"SQS message sending failed: {str(e)}")
             # Don't fail the booking if SQS fails
@@ -165,8 +160,7 @@ def handle_create_booking(event):
         return cors_response(201, {
                 'success': True,
                 'bookingId': booking_id,
-                'message': 'Booking created successfully',
-                'booking': convert_decimals(booking_data)
+                'message': 'Booking created successfully'
             }, origin)
         
     except Exception as e:

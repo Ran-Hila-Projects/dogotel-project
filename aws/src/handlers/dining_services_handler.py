@@ -84,34 +84,30 @@ def handle_get_service(service_id, event):
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_list_dining(event):
-    """Handle listing all dining options"""
+    """Handle listing all dining options - return direct array"""
     try:
         origin = extract_origin_from_event(event)
         
         response = dining_table.scan()
         dining_options = [convert_decimals(item) for item in response['Items']]
         
-        return cors_response(200, {
-            'dining': dining_options,
-            'count': len(dining_options)
-        }, origin)
+        # Return direct array to match frontend expectations
+        return cors_response(200, dining_options, origin)
         
     except Exception as e:
         print(f"List dining error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_list_services(event):
-    """Handle listing all services"""
+    """Handle listing all services - return direct array"""
     try:
         origin = extract_origin_from_event(event)
         
         response = services_table.scan()
         services = [convert_decimals(item) for item in response['Items']]
         
-        return cors_response(200, {
-            'services': services,
-            'count': len(services)
-        }, origin)
+        # Return direct array to match frontend expectations
+        return cors_response(200, services, origin)
         
     except Exception as e:
         print(f"List services error: {str(e)}")

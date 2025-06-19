@@ -79,10 +79,10 @@ def handle_list_rooms(event):
         # Apply filters
         filtered_rooms = []
         for room in rooms:
-            # Price filter
-            if min_price and room['price_per_night'] < Decimal(min_price):
+            # Price filter (using price field to match frontend)
+            if min_price and room.get('price', room.get('price_per_night', 0)) < Decimal(min_price):
                 continue
-            if max_price and room['price_per_night'] > Decimal(max_price):
+            if max_price and room.get('price', room.get('price_per_night', 0)) > Decimal(max_price):
                 continue
             
             # Size filter
@@ -98,10 +98,8 @@ def handle_list_rooms(event):
             room_copy = transform_room_for_frontend(convert_decimals(room))
             filtered_rooms.append(room_copy)
         
-        return cors_response(200, {
-                'rooms': filtered_rooms,
-                'count': len(filtered_rooms)
-            }, origin)
+        # Return direct array to match frontend expectations
+        return cors_response(200, filtered_rooms, origin)
         
     except Exception as e:
         print(f"List rooms error: {str(e)}")
@@ -390,19 +388,16 @@ def is_admin(event):
         return False
 
 def transform_room_for_frontend(room):
-    """Transform room data to match exact format from Ran_dev.txt"""
+    """Transform room data to match exact frontend format from data/rooms.js"""
     return {
         'id': room.get('room_id'),
         'title': room.get('title'),
         'subtitle': room.get('subtitle', ''),
         'description': room.get('description'),
-        'dogsAmount': room.get('dogsAmount', 1),  # For list view
-        'dogsAllowed': room.get('dogsAmount', 1),  # For detail view
+        'dogsAmount': room.get('dogsAmount', 1),
         'size': room.get('size'),
-        'price': room.get('price'),
-        'image': room.get('image'),  # base64 or S3 URL
-        'imageUrl': room.get('image'),  # For compatibility
-        'features': room.get('features', []),
+        'price': room.get('price', room.get('price_per_night')),  # Frontend expects 'price'
+        'image': room.get('image'),  # S3 URL or base64
         'included': room.get('included', []),
         'reviews': room.get('reviews', [])
     }

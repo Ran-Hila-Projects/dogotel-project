@@ -16,7 +16,7 @@ def get_cors_headers(
     additional_headers: Optional[Dict[str, str]] = None
 ) -> Dict[str, str]:
     """
-    Get comprehensive CORS headers that solve common CORS issues
+    Get comprehensive CORS headers optimized for API Gateway + Lambda
     
     Args:
         origin: Specific origin to allow (if None, allows all with '*')
@@ -28,10 +28,16 @@ def get_cors_headers(
         Dict with all necessary CORS headers
     """
     
-    # Base CORS headers that solve most common issues
+    # Determine allowed origin - prioritize development localhost
+    allowed_origin = origin
+    if not allowed_origin:
+        # Default to localhost during development, * for production
+        allowed_origin = 'http://localhost:3000'
+    
+    # Base CORS headers optimized for API Gateway
     headers = {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': origin if origin else '*',
+        'Access-Control-Allow-Origin': allowed_origin,
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD',
         'Access-Control-Allow-Headers': ','.join([
             'Accept',
@@ -52,17 +58,16 @@ def get_cors_headers(
             'Pragma'
         ]),
         'Access-Control-Max-Age': str(max_age),
-        'Access-Control-Expose-Headers': 'Date,X-Amzn-RequestId,X-Amzn-ErrorType',
+        'Access-Control-Expose-Headers': 'Date,X-Amzn-RequestId,X-Amzn-ErrorType,Content-Length',
         'Vary': 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
     }
     
-    # Only add credentials header if origin is specific (not '*')
-    if allow_credentials and origin and origin != '*':
+    # Handle credentials based on origin
+    if allow_credentials and allowed_origin != '*':
         headers['Access-Control-Allow-Credentials'] = 'true'
-    elif allow_credentials and not origin:
-        # If no specific origin but credentials needed, default to common localhost
-        headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-        headers['Access-Control-Allow-Credentials'] = 'true'
+    else:
+        # If using wildcard origin, can't use credentials
+        headers['Access-Control-Allow-Credentials'] = 'false'
     
     # Add any additional headers
     if additional_headers:

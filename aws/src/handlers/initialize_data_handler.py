@@ -33,107 +33,97 @@ def cors_response(status_code: int, body: dict):
     }
 
 def create_sample_rooms():
-    """Create sample rooms with different types and pricing"""
+    """Create sample room data that matches frontend expectations"""
     sample_rooms = [
         {
-            'room_id': str(uuid.uuid4()),
-            'name': 'Cozy Cabin Suite',
-            'type': 'Standard',
-            'description': 'A comfortable standard room perfect for medium-sized dogs. Features include a cozy bed, toys, and regular playtime.',
-            'capacity': 2,
-            'price_per_night': Decimal('35.00'),
-            'amenities': ['Indoor Play Area', 'Comfortable Bedding', 'Toys', 'Regular Walks'],
-            'size_sqft': 48,
-            'available': True,
-            'images': [
-                'https://example.com/room1-1.jpg',
-                'https://example.com/room1-2.jpg'
+            'room_id': '1',
+            'title': 'The Cozy Kennel',
+            'subtitle': 'Perfect for Solo Nappers 💤',
+            'description': 'A comfortable and intimate space designed for your dog\'s relaxation and peace. Features premium bedding, climate control, and daily housekeeping.',
+            'dogsAmount': 1,
+            'price': Decimal('55'),
+            'size': '30m²',
+            'image': 'https://example.com/room1.jpg',
+            'included': ['Daily housekeeping', 'Premium bedding', 'Climate control', 'Feeding service'],
+            'reviews': [
+                {'name': 'Hila', 'stars': 5, 'review': 'Perfect for my small dog! Very clean and comfortable.'},
+                {'name': 'David', 'stars': 4, 'review': 'Great service, my dog loved it here.'}
             ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+            'is_available': True,
+            'createdAt': datetime.now().isoformat(),
+            'updatedAt': datetime.now().isoformat()
         },
         {
-            'room_id': str(uuid.uuid4()),
-            'name': 'Luxury Palace Suite',
-            'type': 'Luxury',
+            'room_id': '2',
+            'title': 'Luxury Palace Suite',
+            'subtitle': 'Royal Treatment Awaits 👑',
             'description': 'Our premium luxury suite with spacious accommodations, premium amenities, and personalized care for your special pet.',
-            'capacity': 1,
-            'price_per_night': Decimal('85.00'),
-            'amenities': ['Private Outdoor Run', 'Premium Bedding', 'Personalized Care', 'Gourmet Treats', 'Grooming Service'],
-            'size_sqft': 120,
-            'available': True,
-            'images': [
-                'https://example.com/room2-1.jpg',
-                'https://example.com/room2-2.jpg'
+            'dogsAmount': 1,
+            'price': Decimal('85'),
+            'size': '50m²',
+            'image': 'https://example.com/room2.jpg',
+            'included': ['Private outdoor run', 'Premium bedding', 'Personalized care', 'Gourmet treats', 'Grooming service'],
+            'reviews': [
+                {'name': 'Sarah', 'stars': 5, 'review': 'Absolutely amazing! My dog was treated like royalty.'},
+                {'name': 'Mike', 'stars': 5, 'review': 'Worth every penny. Top-notch service.'}
             ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+            'is_available': True,
+            'createdAt': datetime.now().isoformat(),
+            'updatedAt': datetime.now().isoformat()
         },
         {
-            'room_id': str(uuid.uuid4()),
-            'name': 'Economy Comfort Den',
-            'type': 'Economy',
+            'room_id': '3',
+            'title': 'Economy Comfort Den',
+            'subtitle': 'Budget-Friendly Comfort 🏠',
             'description': 'An affordable option that doesn\'t compromise on care. Perfect for budget-conscious pet parents.',
-            'capacity': 3,
-            'price_per_night': Decimal('25.00'),
-            'amenities': ['Shared Play Area', 'Basic Bedding', 'Daily Walks'],
-            'size_sqft': 32,
-            'available': True,
-            'images': [
-                'https://example.com/room3-1.jpg'
+            'dogsAmount': 3,
+            'price': Decimal('25'),
+            'size': '25m²',
+            'image': 'https://example.com/room3.jpg',
+            'included': ['Shared play area', 'Basic bedding', 'Daily walks'],
+            'reviews': [
+                {'name': 'Lisa', 'stars': 4, 'review': 'Great value for money. My dogs were happy.'},
+                {'name': 'Tom', 'stars': 4, 'review': 'Clean and safe, good for multiple dogs.'}
             ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+            'is_available': True,
+            'createdAt': datetime.now().isoformat(),
+            'updatedAt': datetime.now().isoformat()
         },
         {
-            'room_id': str(uuid.uuid4()),
-            'name': 'The Presidential Paw Suite',
-            'type': 'Luxury',
+            'room_id': '4',
+            'title': 'The Presidential Paw Suite',
+            'subtitle': 'Ultimate Luxury Experience ⭐',
             'description': 'The ultimate in luxury pet boarding. Spacious suite with private garden access and 24/7 personalized attention.',
-            'capacity': 1,
-            'price_per_night': Decimal('120.00'),
-            'amenities': ['Private Garden', 'Premium Bedding', '24/7 Care', 'Gourmet Meals', 'Spa Services', 'Live Webcam'],
-            'size_sqft': 200,
-            'available': True,
-            'images': [
-                'https://example.com/room4-1.jpg',
-                'https://example.com/room4-2.jpg',
-                'https://example.com/room4-3.jpg'
+            'dogsAmount': 1,
+            'price': Decimal('120'),
+            'size': '80m²',
+            'image': 'https://example.com/room4.jpg',
+            'included': ['Private garden', 'Premium bedding', '24/7 care', 'Gourmet meals', 'Spa services', 'Live webcam'],
+            'reviews': [
+                {'name': 'Emma', 'stars': 5, 'review': 'The best boarding experience ever! Highly recommend.'},
+                {'name': 'John', 'stars': 5, 'review': 'My dog came back more relaxed than when he left!'}
             ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+            'is_available': True,
+            'createdAt': datetime.now().isoformat(),
+            'updatedAt': datetime.now().isoformat()
         },
         {
-            'room_id': str(uuid.uuid4()),
-            'name': 'Family Pack Lodge',
-            'type': 'Standard',
+            'room_id': '5',
+            'title': 'Family Pack Lodge',
+            'subtitle': 'Perfect for Pack Adventures 🐕‍🦺',
             'description': 'Perfect for families with multiple dogs. Spacious room designed for comfort and socialization.',
-            'capacity': 4,
-            'price_per_night': Decimal('55.00'),
-            'amenities': ['Large Play Area', 'Multiple Beds', 'Group Activities', 'Extended Playtime'],
-            'size_sqft': 80,
-            'available': True,
-            'images': [
-                'https://example.com/room5-1.jpg'
+            'dogsAmount': 4,
+            'price': Decimal('55'),
+            'size': '60m²',
+            'image': 'https://example.com/room5.jpg',
+            'included': ['Large play area', 'Multiple beds', 'Group activities', 'Extended playtime'],
+            'reviews': [
+                {'name': 'Anna', 'stars': 5, 'review': 'Perfect for my three dogs! They loved playing together.'},
+                {'name': 'Robert', 'stars': 4, 'review': 'Great space for multiple pets. Well organized.'}
             ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
-        },
-        {
-            'room_id': str(uuid.uuid4()),
-            'name': 'Budget Buddy Bunk',
-            'type': 'Economy',
-            'description': 'Simple, clean, and comfortable accommodations at an unbeatable price.',
-            'capacity': 2,
-            'price_per_night': Decimal('20.00'),
-            'amenities': ['Shared Play Area', 'Basic Bedding', 'Daily Walks', 'Group Activities'],
-            'size_sqft': 28,
-            'available': True,
-            'images': [
-                'https://example.com/room6-1.jpg'
-            ],
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+            'is_available': True,
+            'createdAt': datetime.now().isoformat(),
+            'updatedAt': datetime.now().isoformat()
         }
     ]
     
@@ -143,9 +133,9 @@ def create_sample_rooms():
         try:
             rooms_table.put_item(Item=room)
             success_count += 1
-            logger.info(f"Created room: {room['name']}")
+            logger.info(f"Created room: {room['title']}")
         except Exception as e:
-            logger.error(f"Error creating room {room['name']}: {str(e)}")
+            logger.error(f"Error creating room {room['title']}: {str(e)}")
     
     return success_count, len(sample_rooms)
 
