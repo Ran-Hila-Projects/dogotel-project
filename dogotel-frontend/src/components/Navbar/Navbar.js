@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import { ReactComponent as ShoppingCart } from "../../assets/icons/shopping-cart.svg";
 
@@ -11,6 +11,7 @@ function getInitials(name) {
 }
 
 function Navbar({ isLoggedIn, userName, onLogout }) {
+  const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.clear();
     if (onLogout) onLogout();
@@ -47,7 +48,17 @@ function Navbar({ isLoggedIn, userName, onLogout }) {
               </button>
             </>
           ) : (
-            <button className="login-btn">Log in</button>
+            <>
+              <button className="login-btn" onClick={() => navigate("/login")}>
+                Log in
+              </button>
+              <button
+                className="signup-btn"
+                onClick={() => navigate("/signup")}
+              >
+                Sign up
+              </button>
+            </>
           )}
         </div>
       </div>

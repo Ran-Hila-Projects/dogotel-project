@@ -63,6 +63,7 @@
 }
 
 .login-btn,
+.signup-btn,
 .logout-btn {
   border: 1px solid var(--font-brown-dark);
   padding: 6px 20px;
@@ -77,6 +78,7 @@
 }
 
 .login-btn:hover,
+.signup-btn:hover,
 .logout-btn:hover {
   background: var(--font-brown-dark);
   color: #fff;

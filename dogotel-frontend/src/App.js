@@ -11,9 +11,11 @@ import CartPage from "./pages/Cart/Cart";
 import NotFound from "./404";
 import AdminPage from "./pages/Admin/Admin";
 import ProfilePage from "./pages/Profile/Profile";
+import Login from "./pages/Login/Login";
+import Signup from "./pages/Signup/Signup";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const userName = "Hila Tsivion";
 
   const handleLogout = () => {
@@ -37,6 +39,8 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/admin" element={<AdminPage userName={userName} />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
