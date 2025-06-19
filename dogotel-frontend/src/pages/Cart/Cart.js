@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Cart.css";
 import Toast from "../../components/Toast/Toast";
 import ReactConfetti from "react-confetti";
+import CONFIG from "../../config";
 
 function BookingSuccessModal({ open, dogNames, onClose }) {
   if (!open) return null;
@@ -70,7 +71,7 @@ function Cart() {
       // Dummy async function to simulate booking
       await new Promise((res) => setTimeout(res, 1200));
       // Uncomment below for real API call:
-      // const response = await fetch("/api/bookings", {
+      // const response = await fetch(CONFIG.API_URL + "api/bookings", {
       //   method: "POST",
       //   headers: { "Content-Type": "application/json" },
       //   body: JSON.stringify(cart),

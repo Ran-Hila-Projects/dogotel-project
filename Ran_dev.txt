@@ -263,7 +263,7 @@ Dogotel Backend API Requirements
   "success": true
 }
 
----
+--- 
 
 12. Delete Room
 -------------------------
@@ -274,7 +274,7 @@ Dogotel Backend API Requirements
   "success": true
 }
 
----
+--- 
 
 13. Get Bookings
 -------------------------

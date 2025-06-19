@@ -7,11 +7,12 @@ import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import Toast from "../../components/Toast/Toast";
 import rooms from "../../data/rooms";
+import CONFIG from "../../config";
 
 // Future: fetch from AWS DynamoDB
 async function fetchRooms() {
   // In the future, fetch from server
-  // const response = await fetch('/api/rooms');
+  // const response = await fetch(CONFIG.API_URL + "api/rooms");
   // return await response.json();
   return Object.values(rooms);
 }
