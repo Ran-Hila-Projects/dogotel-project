@@ -1,702 +1,432 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: 'Dogotel - Dog Boarding Application for AWS Academy Learner Lab'
-
-Parameters:
-  Environment:
-    Type: String
-    Default: 'dev'
-    Description: Environment name
-  
-  CognitoDomainPrefix:
-    Type: String
-    Default: 'dogotel-auth'
-    Description: Cognito Domain Prefix (must be globally unique)
-  
-  AdminEmail:
-    Type: String
-    Default: 'admin@example.com'
-    Description: Admin email for initial setup
+Description: Dogotel Backend API - Only endpoints from Ran_dev.txt
 
 Globals:
   Function:
     Timeout: 30
-    Runtime: python3.11
+    Runtime: python3.9
     Environment:
       Variables:
-        ENVIRONMENT: !Ref Environment
         DYNAMODB_TABLE_ROOMS: !Ref RoomsTable
         DYNAMODB_TABLE_BOOKINGS: !Ref BookingsTable
         DYNAMODB_TABLE_REVIEWS: !Ref ReviewsTable
-        DYNAMODB_TABLE_USERS: !Ref UsersTable
         DYNAMODB_TABLE_DINING: !Ref DiningTable
         DYNAMODB_TABLE_SERVICES: !Ref ServicesTable
-        COGNITO_USER_POOL_ID: !Ref UserPool
-        COGNITO_CLIENT_ID: !Ref UserPoolClient
+        DYNAMODB_TABLE_USERS: !Ref UsersTable
         BOOKING_EVENTS_QUEUE_URL: !Ref BookingEventsQueue
         BOOKING_CONFIRMATION_TOPIC_ARN: !Ref BookingConfirmationTopic
-  Api:
-    Cors:
-      AllowMethods: "'*'"
-      AllowHeaders: "'*'"
-      AllowOrigin: "'*'"
+        S3_BUCKET: !Ref ImagesBucket
 
 Resources:
-  # DynamoDB Tables
-  RoomsTable:
-    Type: AWS::DynamoDB::Table
+  # S3 Bucket for images
+  ImagesBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      TableName: !Sub 'dogotel-rooms-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'room_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'room_id'
-          KeyType: 'HASH'
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
+      BucketName: !Sub "dogotel-images-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ['*']
+            MaxAge: 3000
 
-  BookingsTable:
-    Type: AWS::DynamoDB::Table
+  # S3 Bucket Policy for public read access
+  ImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
     Properties:
-      TableName: !Sub 'dogotel-bookings-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'booking_id'
-          AttributeType: 'S'
-        - AttributeName: 'user_id'
-          AttributeType: 'S'
-        - AttributeName: 'room_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'booking_id'
-          KeyType: 'HASH'
-      GlobalSecondaryIndexes:
-        - IndexName: 'UserBookingsIndex'
-          KeySchema:
-            - AttributeName: 'user_id'
-              KeyType: 'HASH'
-          Projection:
-            ProjectionType: ALL
-        - IndexName: 'RoomBookingsIndex'
-          KeySchema:
-            - AttributeName: 'room_id'
-              KeyType: 'HASH'
-          Projection:
-            ProjectionType: ALL
-
-  ReviewsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'dogotel-reviews-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'review_id'
-          AttributeType: 'S'
-        - AttributeName: 'room_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'review_id'
-          KeyType: 'HASH'
-      GlobalSecondaryIndexes:
-        - IndexName: 'RoomReviewsIndex'
-          KeySchema:
-            - AttributeName: 'room_id'
-              KeyType: 'HASH'
-          Projection:
-            ProjectionType: ALL
-
-  UsersTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'dogotel-users-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'user_id'
-          AttributeType: 'S'
-        - AttributeName: 'email'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'user_id'
-          KeyType: 'HASH'
-      GlobalSecondaryIndexes:
-        - IndexName: 'EmailIndex'
-          KeySchema:
-            - AttributeName: 'email'
-              KeyType: 'HASH'
-          Projection:
-            ProjectionType: ALL
-
-  DiningTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'dogotel-dining-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'dining_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'dining_id'
-          KeyType: 'HASH'
-
-  ServicesTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'dogotel-services-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: 'service_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'service_id'
-          KeyType: 'HASH'
-
-  # SQS Queue for booking events
-  BookingEventsQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub 'dogotel-booking-events-${Environment}'
-      VisibilityTimeoutSeconds: 180
-      MessageRetentionPeriod: 1209600  # 14 days
-      ReceiveMessageWaitTimeSeconds: 20  # Long polling
-
-  # SNS Topic for booking confirmations
-  BookingConfirmationTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub 'dogotel-booking-confirmations-${Environment}'
-      DisplayName: 'Dogotel Booking Confirmations'
-
-  # Cognito User Pool
-  UserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: !Sub 'dogotel-users-${Environment}'
-      AutoVerifiedAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireUppercase: false
-          RequireLowercase: false
-          RequireNumbers: false
-          RequireSymbols: false
-      Schema:
-        - Name: email
-          AttributeDataType: String
-          Required: true
-          Mutable: true
-        - Name: name
-          AttributeDataType: String
-          Required: true
-          Mutable: true
-        - Name: custom:role
-          AttributeDataType: String
-          Required: false
-          Mutable: true
-
-  UserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      UserPoolId: !Ref UserPool
-      ClientName: !Sub 'dogotel-client-${Environment}'
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - ADMIN_NO_SRP_AUTH
-        - USER_PASSWORD_AUTH
-        - ALLOW_USER_SRP_AUTH
-        - ALLOW_REFRESH_TOKEN_AUTH
+      Bucket: !Ref ImagesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub "${ImagesBucket}/*"
 
   # API Gateway
   DogotelApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: !Ref Environment
-      Auth:
-        DefaultAuthorizer: CognitoAuthorizer
-        Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt UserPool.Arn
-        AddDefaultAuthorizerToCorsPreflight: false
+      StageName: prod
       Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD'"
-        AllowHeaders: "'Accept,Accept-Language,Authorization,Content-Language,Content-Type,Origin,Referer,User-Agent,X-Amz-Date,X-Amz-Security-Token,X-Api-Key,X-Requested-With,X-Forwarded-For,X-Real-IP,Cache-Control,Pragma'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: "'*'"
-        AllowCredentials: false
-        MaxAge: "'86400'"
-      GatewayResponses:
-        DEFAULT_4XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Accept,Accept-Language,Authorization,Content-Language,Content-Type,Origin,Referer,User-Agent,X-Amz-Date,X-Amz-Security-Token,X-Api-Key,X-Requested-With,X-Forwarded-For,X-Real-IP,Cache-Control,Pragma'"
-              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD'"
-        DEFAULT_5XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Accept,Accept-Language,Authorization,Content-Language,Content-Type,Origin,Referer,User-Agent,X-Amz-Date,X-Amz-Security-Token,X-Api-Key,X-Requested-With,X-Forwarded-For,X-Real-IP,Cache-Control,Pragma'"
-              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD'"
+        MaxAge: "'600'"
 
-  # Lambda Functions
-  AuthFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-auth-${Environment}'
-      CodeUri: src/handlers/
-      Handler: auth_handler.lambda_handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-        - Statement:
-          - Effect: Allow
-            Action:
-              - cognito-idp:AdminCreateUser
-              - cognito-idp:AdminSetUserPassword
-              - cognito-idp:AdminUpdateUserAttributes
-              - cognito-idp:AdminGetUser
-              - cognito-idp:AdminDeleteUser
-            Resource: !GetAtt UserPool.Arn
-      Events:
-        Register:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/register
-            Method: post
-            Auth:
-              Authorizer: NONE
-        Login:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/login
-            Method: post
-            Auth:
-              Authorizer: NONE
-        Profile:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/profile
-            Method: get
-
+  # Lambda Functions (only from Ran_dev.txt)
+  
+  # Rooms Handler - Endpoints 1,2,3,8,10,11,12
   RoomsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'dogotel-rooms-${Environment}'
       CodeUri: src/handlers/
       Handler: rooms_handler.lambda_handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BookingsTable
       Events:
-        ListRooms:
+        # GET /api/rooms
+        GetRooms:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms
             Method: get
-            Auth:
-              Authorizer: NONE
+        # GET /api/rooms/:id
         GetRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /rooms/{room_id}
+            Path: /rooms/{id}
             Method: get
-            Auth:
-              Authorizer: NONE
+        # GET /api/rooms/:id/unavailable-dates
+        GetUnavailableDates:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{id}/unavailable-dates
+            Method: get
+        # GET /api/rooms/:id/unavailable-ranges
+        GetUnavailableRanges:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{id}/unavailable-ranges
+            Method: get
+        # POST /api/rooms
         CreateRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /admin/rooms
+            Path: /rooms
             Method: post
+        # PUT /api/rooms/:id
         UpdateRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /admin/rooms/{room_id}
+            Path: /rooms/{id}
             Method: put
+        # DELETE /api/rooms/:id
         DeleteRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /admin/rooms/{room_id}
+            Path: /rooms/{id}
             Method: delete
-        GetRoomUnavailableDates:
+        # OPTIONS for CORS
+        OptionsRooms:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /rooms/{room_id}/unavailable-dates
-            Method: get
-            Auth:
-              Authorizer: NONE
-        GetRoomUnavailableRanges:
+            Path: /rooms
+            Method: options
+        OptionsRoomId:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /rooms/{room_id}/unavailable-ranges
-            Method: get
-            Auth:
-              Authorizer: NONE
+            Path: /rooms/{id}
+            Method: options
+        OptionsUnavailableDates:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{id}/unavailable-dates
+            Method: options
+        OptionsUnavailableRanges:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{id}/unavailable-ranges
+            Method: options
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RoomsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref ImagesBucket
 
+  # Bookings Handler - Endpoints 4,5,9,13
   BookingsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'dogotel-bookings-${Environment}'
       CodeUri: src/handlers/
       Handler: bookings_handler.lambda_handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BookingsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RoomsTable
-        - Statement:
-          - Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource: !GetAtt BookingEventsQueue.Arn
       Events:
+        # GET /api/bookings?userId=... (endpoint 4)
+        # GET /api/bookings (endpoint 13)
+        GetBookings:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /bookings
+            Method: get
+        # POST /api/bookings (endpoints 5 and 9)
         CreateBooking:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /bookings
             Method: post
-        GetUserBookings:
+        # OPTIONS for CORS
+        OptionsBookings:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /bookings
-            Method: get
-        GetBooking:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /bookings/{booking_id}
-            Method: get
-        CancelBooking:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /bookings/{booking_id}
-            Method: delete
-        AdminGetAllBookings:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/bookings
-            Method: get
-        AdminUpdateBooking:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/bookings/{booking_id}
-            Method: put
-
-  ReviewsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-reviews-${Environment}'
-      CodeUri: src/handlers/
-      Handler: reviews_handler.lambda_handler
+            Method: options
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ReviewsTable
-        - DynamoDBCrudPolicy:
             TableName: !Ref BookingsTable
-      Events:
-        GetRoomReviews:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /rooms/{room_id}/reviews
-            Method: get
-            Auth:
-              Authorizer: NONE
-        CreateRoomReview:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /rooms/{room_id}/reviews
-            Method: post
-        CreateReview:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /reviews
-            Method: post
-        UpdateReview:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /reviews/{review_id}
-            Method: put
-        DeleteReview:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /reviews/{review_id}
-            Method: delete
-        AdminGetAllReviews:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/reviews
-            Method: get
-        AdminModerateReview:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/reviews/{review_id}/moderate
-            Method: put
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RoomsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt BookingEventsQueue.QueueName
 
+  # Dining and Services Handler - Endpoint 6
   DiningServicesFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'dogotel-dining-services-${Environment}'
       CodeUri: src/handlers/
       Handler: dining_services_handler.lambda_handler
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref DiningTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref ServicesTable
       Events:
+        # GET /api/dining/:id
         GetDining:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /dining/{dining_id}
+            Path: /dining/{id}
             Method: get
-            Auth:
-              Authorizer: NONE
+        # GET /api/services/:id
         GetService:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /services/{service_id}
+            Path: /services/{id}
             Method: get
-            Auth:
-              Authorizer: NONE
-        ListDining:
+        # OPTIONS for CORS
+        OptionsDining:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /dining
-            Method: get
-            Auth:
-              Authorizer: NONE
-        ListServices:
+            Path: /dining/{id}
+            Method: options
+        OptionsServices:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /services
-            Method: get
-            Auth:
-              Authorizer: NONE
-
-  BookingEventProcessorFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-booking-event-processor-${Environment}'
-      CodeUri: src/handlers/
-      Handler: booking_event_processor.lambda_handler
-      Timeout: 60
-      Policies:
-        - Statement:
-          - Effect: Allow
-            Action:
-              - sns:Publish
-            Resource: !Ref BookingConfirmationTopic
-      Events:
-        BookingEventsQueue:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt BookingEventsQueue.Arn
-            BatchSize: 10
-
-  # Admin Functions
-  AdminDashboardFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-admin-dashboard-${Environment}'
-      CodeUri: src/handlers/
-      Handler: admin_dashboard_handler.lambda_handler
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref BookingsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref ReviewsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
-      Events:
-        GetDashboard:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/dashboard
-            Method: get
-
-  AdminReportsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-admin-reports-${Environment}'
-      CodeUri: src/handlers/
-      Handler: admin_reports_handler.lambda_handler
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref BookingsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref ReviewsTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
-      Events:
-        GenerateReport:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/reports
-            Method: get
-
-  # S3 Bucket for Frontend and Image Storage
-  WebsiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub 'dogotel-website-${Environment}-${AWS::AccountId}'
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: error.html
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-
-  WebsiteBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref WebsiteBucket
-      PolicyDocument:
-        Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: '*'
-            Action: 's3:GetObject'
-            Resource: !Sub '${WebsiteBucket}/*'
-
-  # Simple notification for basic email alerts (POC level)
-  NotificationTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub 'dogotel-notifications-${Environment}'
-
-  # Initialize data function
-  InitializeDataFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-initialize-data-${Environment}'
-      CodeUri: src/handlers/
-      Handler: initialize_data_handler.lambda_handler
-      Timeout: 300
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-        - Statement:
-          - Effect: Allow
-            Action:
-              - cognito-idp:AdminCreateUser
-              - cognito-idp:AdminSetUserPassword
-              - cognito-idp:AdminUpdateUserAttributes
-            Resource: !GetAtt UserPool.Arn
-      Events:
-        InitializeData:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/initialize
-            Method: post
-            Auth:
-              Authorizer: NONE
-
-  InitializeDiningServicesFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'dogotel-init-dining-services-${Environment}'
-      CodeUri: src/handlers/
-      Handler: init_dining_services_data.lambda_handler
-      Timeout: 120
+            Path: /services/{id}
+            Method: options
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DiningTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ServicesTable
+
+  # Reviews Handler - Endpoint 7
+  ReviewsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: reviews_handler.lambda_handler
       Events:
-        InitializeDiningServices:
+        # POST /api/rooms/:id/reviews
+        CreateReview:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
-            Path: /admin/init-dining-services
+            Path: /rooms/{id}/reviews
             Method: post
-            Auth:
-              Authorizer: NONE
+        # OPTIONS for CORS
+        OptionsReviews:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /rooms/{id}/reviews
+            Method: options
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReviewsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RoomsTable
+
+  # User Handler - Endpoints 14,15
+  UserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: user_handler.lambda_handler
+      Events:
+        # GET /api/user/:email
+        GetUserProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /user/{email}
+            Method: get
+        # GET /api/bookings/:email
+        GetBookingHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /bookings/{email}
+            Method: get
+        # OPTIONS for CORS
+        OptionsUser:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /user/{email}
+            Method: options
+        OptionsBookingHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DogotelApi
+            Path: /bookings/{email}
+            Method: options
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref ImagesBucket
+
+  # Booking Event Processor (for SQS/SNS notifications)
+  BookingEventProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: booking_event_processor.lambda_handler
+      Events:
+        BookingEventTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BookingEventsQueue.Arn
+            BatchSize: 1
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt BookingConfirmationTopic.TopicName
+
+  # DynamoDB Tables
+  RoomsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelRooms
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: room_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: room_id
+          KeyType: HASH
+
+  BookingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelBookings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: bookingId
+          AttributeType: S
+        - AttributeName: userEmail
+          AttributeType: S
+      KeySchema:
+        - AttributeName: bookingId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserBookingsIndex
+          KeySchema:
+            - AttributeName: userEmail
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  ReviewsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelReviews
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: review_id
+          AttributeType: S
+        - AttributeName: room_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: review_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RoomReviewsIndex
+          KeySchema:
+            - AttributeName: room_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  DiningTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelDining
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: dining_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: dining_id
+          KeyType: HASH
+
+  ServicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelServices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: service_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: service_id
+          KeyType: HASH
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DogotelUsers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+
+  # SQS Queue for booking events
+  BookingEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: DogotelBookingEvents
+      VisibilityTimeoutSeconds: 300
+
+  # SNS Topic for booking confirmations
+  BookingConfirmationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: DogotelBookingConfirmations
 
 Outputs:
-  ApiUrl:
-    Description: 'API Gateway endpoint URL'
-    Value: !Sub 'https://${DogotelApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
-    Export:
-      Name: !Sub '${AWS::StackName}-ApiUrl'
-
-  WebsiteUrl:
-    Description: 'S3 Website URL'
-    Value: !GetAtt WebsiteBucket.WebsiteURL
-    Export:
-      Name: !Sub '${AWS::StackName}-WebsiteUrl'
-
-  WebsiteBucketName:
-    Description: 'S3 Bucket Name for Website'
-    Value: !Ref WebsiteBucket
-    Export:
-      Name: !Sub '${AWS::StackName}-WebsiteBucketName'
-
-  CognitoUserPoolId:
-    Description: 'Cognito User Pool ID'
-    Value: !Ref UserPool
-    Export:
-      Name: !Sub '${AWS::StackName}-CognitoUserPoolId'
-
-  CognitoClientId:
-    Description: 'Cognito Client ID'
-    Value: !Ref UserPoolClient
-    Export:
-      Name: !Sub '${AWS::StackName}-CognitoClientId'
-
-  Region:
-    Description: 'AWS Region'
-    Value: !Ref AWS::Region
-    Export:
-      Name: !Sub '${AWS::StackName}-Region'
-
-  BookingEventsQueueUrl:
-    Description: 'SQS Queue URL for Booking Events'
-    Value: !Ref BookingEventsQueue
-    Export:
-      Name: !Sub '${AWS::StackName}-BookingEventsQueueUrl'
-
-  BookingConfirmationTopicArn:
-    Description: 'SNS Topic ARN for Booking Confirmations'
-    Value: !Ref BookingConfirmationTopic
-    Export:
-      Name: !Sub '${AWS::StackName}-BookingConfirmationTopicArn' 
+  DogotelApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${DogotelApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+  
+  ImagesBucketName:
+    Description: "S3 Bucket for images"
+    Value: !Ref ImagesBucket
+    
+  ImagesBucketUrl:
+    Description: "S3 Bucket URL for images"
+    Value: !Sub "https://${ImagesBucket}.s3.amazonaws.com/" 

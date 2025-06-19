@@ -37,18 +37,14 @@ def lambda_handler(event, context):
         if path == '/bookings' and http_method == 'POST':
             return handle_create_booking(event)
         elif path == '/bookings' and http_method == 'GET':
-            return handle_get_user_bookings(event)
-        elif path.startswith('/bookings/') and path.count('/') == 2 and http_method == 'GET':
-            booking_id = path.split('/')[-1]
-            return handle_get_booking(booking_id, event)
-        elif path.startswith('/bookings/') and path.count('/') == 2 and http_method == 'DELETE':
-            booking_id = path.split('/')[-1]
-            return handle_cancel_booking(booking_id, event)
-        elif path == '/admin/bookings' and http_method == 'GET':
-            return handle_admin_get_all_bookings(event)
-        elif path.startswith('/admin/bookings/') and http_method == 'PUT':
-            booking_id = path.split('/')[-1]
-            return handle_admin_update_booking(booking_id, event)
+            # Check if there's a userId query parameter for endpoint 4
+            query_params = event.get('queryStringParameters', {}) or {}
+            if 'userId' in query_params:
+                return handle_get_user_bookings_by_userId(event)
+            else:
+                # Endpoint 13 - get all bookings
+                return handle_get_all_bookings(event)
+# No other booking endpoints required from Ran_dev.txt
         else:
             return cors_error_response(404, 'Endpoint not found', origin)
             
@@ -61,38 +57,45 @@ def handle_create_booking(event):
     try:
         origin = extract_origin_from_event(event)
         
-        # Get user info from JWT token
+        # Use the userEmail from the request body (no JWT required for this endpoint)
+        # Get user info if available from JWT token for additional validation
         claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
-        user_email = claims.get('email')
+        jwt_user_email = claims.get('email')
         user_name = claims.get('name', 'User')
-        
-        if not user_email:
-            return cors_error_response(401, 'Unauthorized', origin)
         
         body = json.loads(event['body'])
         
-        # Support both frontend format (roomId, startDate, endDate) and backend format
-        room_id = body.get('roomId') or body.get('room_id')
-        start_date = body.get('startDate') or body.get('check_in')
-        end_date = body.get('endDate') or body.get('check_out')
-        dogs = body.get('dogs', [])
-        dining_ids = body.get('diningId', [])
-        service_ids = body.get('serviceIds', [])
+        # Support the exact format from Ran_dev.txt
+        user_email = body.get('userEmail')
+        room_data = body.get('room', {})
+        dining_data = body.get('dining', {})
+        services_data = body.get('services', [])
+        total_price = body.get('totalPrice')
+        
+        # Extract room information
+        room_id = room_data.get('roomId')
+        room_title = room_data.get('roomTitle')
+        start_date = room_data.get('startDate')
+        end_date = room_data.get('endDate')
+        price_per_night = room_data.get('pricePerNight')
+        dogs = room_data.get('dogs', [])
         
         # Validate required fields
+        if not user_email:
+            return cors_error_response(400, 'userEmail is required', origin)
         if not room_id:
-            return cors_error_response(400, 'roomId is required', origin)
+            return cors_error_response(400, 'room.roomId is required', origin)
         if not start_date:
-            return cors_error_response(400, 'startDate is required', origin)
+            return cors_error_response(400, 'room.startDate is required', origin)
         if not end_date:
-            return cors_error_response(400, 'endDate is required', origin)
+            return cors_error_response(400, 'room.endDate is required', origin)
         if not dogs:
-            return cors_error_response(400, 'dogs is required', origin)
+            return cors_error_response(400, 'room.dogs is required', origin)
         
-        # Use check_in/check_out internally for consistency
+        # Use internal format for availability checking
         check_in = start_date
         check_out = end_date
-        guest_count = len(dogs)  # Calculate based on number of dogs
+        guest_count = len(dogs)
         
         # Validate dates
         try:
@@ -129,23 +132,25 @@ def handle_create_booking(event):
         nights = (check_out_date - check_in_date).days
         total_cost = Decimal(str(float(room['price_per_night']) * nights))
         
-        # Create booking
+        # Create booking - exact format from Ran_dev.txt
         booking_id = str(uuid.uuid4())
         booking_data = {
-            'booking_id': booking_id,
-            'user_id': user_email,  # Using email as user_id for simplicity
-            'room_id': room_id,
-            'check_in': check_in,
-            'check_out': check_out,
-            'guest_count': guest_count,
-            'dogs': dogs,
-            'dining_ids': dining_ids,
-            'service_ids': service_ids,
-            'total_cost': total_cost,
+            'bookingId': booking_id,
+            'userEmail': user_email,
+            'room': {
+                'roomId': room_id,
+                'roomTitle': room_title,
+                'startDate': start_date,
+                'endDate': end_date,
+                'pricePerNight': price_per_night,
+                'dogs': dogs
+            },
+            'dining': dining_data if dining_data else None,
+            'services': services_data if services_data else [],
+            'totalPrice': total_price,
             'status': 'confirmed',
-            'special_requests': body.get('special_requests', ''),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat()
         }
         
         bookings_table.put_item(Item=booking_data)
@@ -168,160 +173,81 @@ def handle_create_booking(event):
         print(f"Create booking error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
-def handle_get_user_bookings(event):
-    """Handle getting user's bookings"""
+def handle_get_user_bookings_by_userId(event):
+    """Handle GET /api/bookings?userId=... - Endpoint 4 from Ran_dev.txt"""
     try:
-        claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
-        user_email = claims.get('email')
+        origin = extract_origin_from_event(event)
         
-        if not user_email:
-            return cors_error_response(401, 'Unauthorized', origin)
+        query_params = event.get('queryStringParameters', {}) or {}
+        user_id = query_params.get('userId')
         
+        if not user_id:
+            return cors_error_response(400, 'userId parameter is required', origin)
+        
+        # Query bookings by userEmail
         response = bookings_table.query(
             IndexName='UserBookingsIndex',
-            KeyConditionExpression='user_id = :user_id',
-            ExpressionAttributeValues={':user_id': user_email}
+            KeyConditionExpression='userEmail = :userEmail',
+            ExpressionAttributeValues={':userEmail': user_id}
         )
         
-        bookings = [convert_decimals(booking) for booking in response['Items']]
+        # Transform to exact format from Ran_dev.txt endpoint 4
+        bookings = []
+        for booking in response['Items']:
+            room_data = booking.get('room', {})
+            bookings.append({
+                'bookingId': booking.get('bookingId'),
+                'roomId': room_data.get('roomId'),
+                'startDate': room_data.get('startDate'),
+                'endDate': room_data.get('endDate'),
+                'dogs': room_data.get('dogs', [])
+            })
         
-        return cors_response(200, {
-                'bookings': bookings,
-                'count': len(bookings)
-            }, origin)
+        return cors_response(200, bookings, origin)
         
     except Exception as e:
         print(f"Get user bookings error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
-def handle_get_booking(booking_id, event):
-    """Handle getting a specific booking"""
+def handle_get_all_bookings(event):
+    """Handle GET /api/bookings - Endpoint 13 from Ran_dev.txt"""
     try:
-        claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
-        user_email = claims.get('email')
-        user_role = claims.get('custom:role', 'USER')
+        origin = extract_origin_from_event(event)
         
-        if not user_email:
-            return cors_error_response(401, 'Unauthorized', origin)
-        
-        response = bookings_table.get_item(Key={'booking_id': booking_id})
-        
-        if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
-        
-        booking = response['Item']
-        
-        # Check if user owns the booking or is admin
-        if booking['user_id'] != user_email and user_role != 'ADMIN':
-            return cors_error_response(403, 'Access denied', origin)
-        
-        return cors_response(200, convert_decimals(booking), origin)
-        
-    except Exception as e:
-        print(f"Get booking error: {str(e)}")
-        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
-
-def handle_cancel_booking(booking_id, event):
-    """Handle canceling a booking"""
-    try:
-        claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
-        user_email = claims.get('email')
-        user_role = claims.get('custom:role', 'USER')
-        
-        if not user_email:
-            return cors_error_response(401, 'Unauthorized', origin)
-        
-        response = bookings_table.get_item(Key={'booking_id': booking_id})
-        
-        if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
-        
-        booking = response['Item']
-        
-        # Check if user owns the booking or is admin
-        if booking['user_id'] != user_email and user_role != 'ADMIN':
-            return cors_error_response(403, 'Access denied', origin)
-        
-        # Check if booking can be cancelled
-        if booking['status'] in ['cancelled', 'completed']:
-            return cors_error_response(400, 'Booking cannot be cancelled', origin)
-        
-        # Update booking status
-        bookings_table.update_item(
-            Key={'booking_id': booking_id},
-            UpdateExpression='SET #status = :status, updated_at = :updated_at',
-            ExpressionAttributeNames={'#status': 'status'},
-            ExpressionAttributeValues={
-                ':status': 'cancelled',
-                ':updated_at': datetime.utcnow().isoformat()
-            }
-        )
-        
-        return cors_response(200, {'message': 'Booking cancelled successfully'}, origin)
-        
-    except Exception as e:
-        print(f"Cancel booking error: {str(e)}")
-        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
-
-def handle_admin_get_all_bookings(event):
-    """Handle admin getting all bookings"""
-    try:
-        if not is_admin(event):
-            return cors_error_response(403, 'Admin access required', origin)
-        
+        # Scan all bookings and sort by creation date
         response = bookings_table.scan()
-        bookings = [convert_decimals(booking) for booking in response['Items']]
         
-        return cors_response(200, {
-                'bookings': bookings,
-                'count': len(bookings)
-            }, origin)
+        # Transform to exact format from Ran_dev.txt endpoint 13
+        bookings = []
+        for booking in response['Items']:
+            room_data = booking.get('room', {})
+            dogs_data = room_data.get('dogs', [])
+            dog_names = [dog.get('name', '') for dog in dogs_data]
+            
+            bookings.append({
+                'bookingId': booking.get('bookingId'),
+                'user': booking.get('userEmail'),
+                'room': room_data.get('roomTitle', ''),
+                'dogs': dog_names,
+                'startDate': room_data.get('startDate'),
+                'endDate': room_data.get('endDate'),
+                'createdAt': booking.get('createdAt')
+            })
+        
+        # Sort by creation date (newest first)
+        bookings.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+        
+        return cors_response(200, bookings, origin)
         
     except Exception as e:
-        print(f"Admin get all bookings error: {str(e)}")
+        print(f"Get all bookings error: {str(e)}")
+        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+        
+    except Exception as e:
+        print(f"Get user bookings error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
-def handle_admin_update_booking(booking_id, event):
-    """Handle admin updating a booking"""
-    try:
-        if not is_admin(event):
-            return cors_error_response(403, 'Admin access required', origin)
-        
-        body = json.loads(event['body'])
-        
-        # Check if booking exists
-        response = bookings_table.get_item(Key={'booking_id': booking_id})
-        if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
-        
-        # Build update expression
-        update_expression = "SET updated_at = :updated_at"
-        expression_values = {':updated_at': datetime.utcnow().isoformat()}
-        
-        allowed_fields = ['status', 'special_requests', 'guest_count']
-        for field in allowed_fields:
-            if field in body:
-                update_expression += f", {field} = :{field}"
-                expression_values[f':{field}'] = body[field]
-        
-        bookings_table.update_item(
-            Key={'booking_id': booking_id},
-            UpdateExpression=update_expression,
-            ExpressionAttributeValues=expression_values
-        )
-        
-        # Get updated booking
-        updated_response = bookings_table.get_item(Key={'booking_id': booking_id})
-        updated_booking = convert_decimals(updated_response['Item'])
-        
-        return cors_response(200, {
-                'message': 'Booking updated successfully',
-                'booking': updated_booking
-            }, origin)
-        
-    except Exception as e:
-        print(f"Admin update booking error: {str(e)}")
-        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+# Removed unused admin functions - only implementing endpoints from Ran_dev.txt
 
 def is_room_available(room_id, check_in, check_out):
     """Check if room is available for given dates"""

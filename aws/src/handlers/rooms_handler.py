@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import base64
 from cors_utils import cors_response, cors_error_response, handle_preflight_request, extract_origin_from_event
 import uuid
 from datetime import datetime, timedelta
@@ -9,10 +10,12 @@ from botocore.exceptions import ClientError
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+s3 = boto3.client('s3')
 
 # Environment variables
 ROOMS_TABLE = os.environ['DYNAMODB_TABLE_ROOMS']
 BOOKINGS_TABLE = os.environ['DYNAMODB_TABLE_BOOKINGS']
+S3_BUCKET = os.environ.get('S3_BUCKET', 'dogotel-images')
 
 rooms_table = dynamodb.Table(ROOMS_TABLE)
 bookings_table = dynamodb.Table(BOOKINGS_TABLE)
@@ -43,12 +46,12 @@ def lambda_handler(event, context):
         elif path.startswith('/rooms/') and path.endswith('/unavailable-ranges') and http_method == 'GET':
             room_id = path.split('/')[-2]
             return handle_get_unavailable_ranges(room_id, event)
-        elif path == '/admin/rooms' and http_method == 'POST':
+        elif path == '/rooms' and http_method == 'POST':
             return handle_create_room(event)
-        elif path.startswith('/admin/rooms/') and http_method == 'PUT':
+        elif path.startswith('/rooms/') and path.count('/') == 2 and http_method == 'PUT':
             room_id = path.split('/')[-1]
             return handle_update_room(room_id, event)
-        elif path.startswith('/admin/rooms/') and http_method == 'DELETE':
+        elif path.startswith('/rooms/') and path.count('/') == 2 and http_method == 'DELETE':
             room_id = path.split('/')[-1]
             return handle_delete_room(room_id, event)
         else:
@@ -207,39 +210,45 @@ def handle_get_unavailable_ranges(room_id, event):
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_create_room(event):
-    """Handle creating a new room (admin only)"""
+    """Handle creating a new room - exact format from Ran_dev.txt"""
     try:
-        # Check if user is admin
-        if not is_admin(event):
-            return cors_error_response(403, 'Admin access required', origin)
+        origin = extract_origin_from_event(event)
         
         body = json.loads(event['body'])
         room_id = str(uuid.uuid4())
         
-        required_fields = ['name', 'description', 'price_per_night', 'size', 'capacity']
+        # Required fields from Ran_dev.txt
+        required_fields = ['title', 'description', 'dogsAmount', 'price', 'size']
         for field in required_fields:
             if field not in body:
-                return cors_response(400, {'error': f'{field} is required'}, origin)
+                return cors_error_response(400, f'{field} is required', origin)
+        
+        # Handle image upload to S3 if it's base64
+        image_url = body.get('image', '')
+        if image_url and image_url.startswith('data:image/'):
+            image_url = upload_image_to_s3(image_url, f"rooms/{room_id}")
         
         room_data = {
             'room_id': room_id,
-            'name': body['name'],
+            'title': body['title'],
+            'subtitle': body.get('subtitle', ''),
             'description': body['description'],
-            'price_per_night': Decimal(str(body['price_per_night'])),
+            'dogsAmount': int(body['dogsAmount']),
+            'price': int(body['price']),
             'size': body['size'],
-            'capacity': int(body['capacity']),
-            'amenities': body.get('amenities', []),
-            'images': body.get('images', []),
-            'is_available': body.get('is_available', True),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'image': image_url,
+            'reviews': body.get('reviews', []),
+            'features': body.get('features', []),
+            'included': body.get('included', []),
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat()
         }
         
         rooms_table.put_item(Item=room_data)
         
         return cors_response(201, {
-                'message': 'Room created successfully',
-                'room': convert_decimals(room_data)
+                'success': True,
+                'id': room_id
             }, origin)
         
     except Exception as e:
@@ -247,48 +256,66 @@ def handle_create_room(event):
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_update_room(room_id, event):
-    """Handle updating a room (admin only)"""
+    """Handle updating an existing room - exact format from Ran_dev.txt"""
     try:
-        # Check if user is admin
-        if not is_admin(event):
-            return cors_error_response(403, 'Admin access required', origin)
+        origin = extract_origin_from_event(event)
         
         body = json.loads(event['body'])
         
-        # Check if room exists
+        # Get current room
         response = rooms_table.get_item(Key={'room_id': room_id})
         if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
+            return cors_error_response(404, 'Room not found', origin)
         
-        # Build update expression
-        update_expression = "SET updated_at = :updated_at"
-        expression_values = {':updated_at': datetime.utcnow().isoformat()}
+        # Handle image upload to S3 if it's base64
+        image_url = body.get('image', '')
+        if image_url and image_url.startswith('data:image/'):
+            image_url = upload_image_to_s3(image_url, f"rooms/{room_id}")
         
-        for field in ['name', 'description', 'size', 'capacity', 'amenities', 'images', 'is_available']:
+        # Update fields if provided
+        update_expression = []
+        expression_attribute_names = {}
+        expression_attribute_values = {}
+        
+        updatable_fields = {
+            'title': 'title',
+            'subtitle': 'subtitle', 
+            'description': 'description',
+            'dogsAmount': 'dogsAmount',
+            'price': 'price',
+            'size': 'size',
+            'image': 'image',
+            'features': 'features',
+            'included': 'included'
+        }
+        
+        for field, db_field in updatable_fields.items():
             if field in body:
-                update_expression += f", {field} = :{field}"
-                if field in ['capacity']:
-                    expression_values[f':{field}'] = int(body[field])
+                update_expression.append(f"#{db_field} = :{db_field}")
+                expression_attribute_names[f"#{db_field}"] = db_field
+                if field == 'dogsAmount':
+                    expression_attribute_values[f":{db_field}"] = int(body[field])
+                elif field == 'price':
+                    expression_attribute_values[f":{db_field}"] = int(body[field])
+                elif field == 'image' and image_url:
+                    expression_attribute_values[f":{db_field}"] = image_url
                 else:
-                    expression_values[f':{field}'] = body[field]
+                    expression_attribute_values[f":{db_field}"] = body[field]
         
-        if 'price_per_night' in body:
-            update_expression += ", price_per_night = :price_per_night"
-            expression_values[':price_per_night'] = Decimal(str(body['price_per_night']))
+        # Always update the updatedAt timestamp
+        update_expression.append("#updatedAt = :updatedAt")
+        expression_attribute_names["#updatedAt"] = "updatedAt"
+        expression_attribute_values[":updatedAt"] = datetime.utcnow().isoformat()
         
         rooms_table.update_item(
             Key={'room_id': room_id},
-            UpdateExpression=update_expression,
-            ExpressionAttributeValues=expression_values
+            UpdateExpression="SET " + ", ".join(update_expression),
+            ExpressionAttributeNames=expression_attribute_names,
+            ExpressionAttributeValues=expression_attribute_values
         )
         
-        # Get updated room
-        updated_response = rooms_table.get_item(Key={'room_id': room_id})
-        updated_room = convert_decimals(updated_response['Item'])
-        
         return cors_response(200, {
-                'message': 'Room updated successfully',
-                'room': updated_room
+                'success': True
             }, origin)
         
     except Exception as e:
@@ -296,18 +323,16 @@ def handle_update_room(room_id, event):
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_delete_room(room_id, event):
-    """Handle deleting a room (admin only)"""
+    """Handle deleting a room - from Ran_dev.txt"""
     try:
-        # Check if user is admin
-        if not is_admin(event):
-            return cors_error_response(403, 'Admin access required', origin)
+        origin = extract_origin_from_event(event)
         
         # Check if room exists
         response = rooms_table.get_item(Key={'room_id': room_id})
         if 'Item' not in response:
-            return cors_error_response(404, 'Endpoint not found', origin)
+            return cors_error_response(404, 'Room not found', origin)
         
-        # Check for active bookings
+        # Check for active bookings (optional safety check)
         booking_response = bookings_table.query(
             IndexName='RoomBookingsIndex',
             KeyConditionExpression='room_id = :room_id',
@@ -326,7 +351,7 @@ def handle_delete_room(room_id, event):
         # Delete room
         rooms_table.delete_item(Key={'room_id': room_id})
         
-        return cors_response(200, {'message': 'Room deleted successfully'}, origin)
+        return cors_response(200, {'success': True}, origin)
         
     except Exception as e:
         print(f"Delete room error: {str(e)}")
@@ -365,22 +390,56 @@ def is_admin(event):
         return False
 
 def transform_room_for_frontend(room):
-    """Transform room data to match frontend expectations from Ran_dev.txt"""
+    """Transform room data to match exact format from Ran_dev.txt"""
     return {
         'id': room.get('room_id'),
-        'title': room.get('name'),
+        'title': room.get('title'),
         'subtitle': room.get('subtitle', ''),
         'description': room.get('description'),
-        'dogsAllowed': room.get('capacity', 1),
+        'dogsAmount': room.get('dogsAmount', 1),  # For list view
+        'dogsAllowed': room.get('dogsAmount', 1),  # For detail view
         'size': room.get('size'),
-        'price': room.get('price_per_night'),
-        'pricePerNight': room.get('price_per_night'),
-        'imageUrl': room.get('images', ['/rooms-images/default.jpg'])[0] if room.get('images') else '/rooms-images/default.jpg',
-        'features': room.get('amenities', []),
+        'price': room.get('price'),
+        'image': room.get('image'),  # base64 or S3 URL
+        'imageUrl': room.get('image'),  # For compatibility
+        'features': room.get('features', []),
         'included': room.get('included', []),
-        'reviews': room.get('reviews', []),
-        'is_available': room.get('is_available', True)
+        'reviews': room.get('reviews', [])
     }
+
+def upload_image_to_s3(base64_image, key_prefix):
+    """Upload base64 image to S3 and return the URL"""
+    try:
+        # Extract image data from base64 string
+        header, encoded = base64_image.split(',', 1)
+        image_data = base64.b64decode(encoded)
+        
+        # Determine file extension from header
+        if 'jpeg' in header or 'jpg' in header:
+            ext = 'jpg'
+        elif 'png' in header:
+            ext = 'png'
+        else:
+            ext = 'jpg'  # default
+        
+        # Create S3 key
+        s3_key = f"{key_prefix}.{ext}"
+        
+        # Upload to S3
+        s3.put_object(
+            Bucket=S3_BUCKET,
+            Key=s3_key,
+            Body=image_data,
+            ContentType=f"image/{ext}",
+            ACL='public-read'
+        )
+        
+        # Return S3 URL
+        return f"https://{S3_BUCKET}.s3.amazonaws.com/{s3_key}"
+        
+    except Exception as e:
+        print(f"Error uploading image to S3: {str(e)}")
+        return base64_image  # Return original if upload fails
 
 def convert_decimals(obj):
     """Convert Decimal objects to float for JSON serialization"""
