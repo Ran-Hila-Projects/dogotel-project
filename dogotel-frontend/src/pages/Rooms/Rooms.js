@@ -95,7 +95,6 @@ function Rooms() {
     setBookingOpen(false);
     setSelectedRoomId(null);
     setToastOpen(true);
-    // Optionally show a success message
   };
 
   return (

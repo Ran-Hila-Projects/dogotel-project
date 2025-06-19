@@ -11,9 +11,14 @@ import Loader from "../../components/Loader/Loader";
 import ReviewWritingPopup from "../../components/ReviewWritingPopup/ReviewWritingPopup";
 import Toast from "../../components/Toast/Toast";
 import rooms from "../../data/rooms";
+import CONFIG from "../../config";
 
 // Simulate async fetch call for room data
 async function fetchRoomDataAsync(roomId) {
+  // Example: fetch from server (dummy, not used in UI)
+  // const response = await fetch(CONFIG.API_URL + `api/rooms/${roomId}`);
+  // const data = await response.json();
+  // return data;
   // Simulate network delay
   await new Promise((res) => setTimeout(res, 300));
   // Use the imported rooms data
@@ -54,7 +59,8 @@ function ARoom() {
   const canAddReview = userBookingsForRoom.length > 0 && !userHasReviewed;
 
   const handleReviewSubmit = ({ stars, text }) => {
-    // In real app, POST to server
+    // Example: POST to server (dummy, not used in UI)
+    // fetch(CONFIG.API_URL + `api/rooms/${roomData.id}/reviews`, { method: "POST", body: JSON.stringify({ stars, text }) })
     alert(`Review submitted: ${stars} stars, text: ${text}`);
     setShowReviewPopup(false);
     // Optionally, refresh reviews
