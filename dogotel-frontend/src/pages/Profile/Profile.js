@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Profile.css";
+import CONFIG from "../../config";
 
 // Dummy user data
 const userData = {
@@ -52,11 +53,14 @@ function Profile() {
       const base64 = reader.result;
       updateDogForm(idx, { photo: base64, uploading: true, error: "" });
       try {
-        const res = await fetch("/api/rekognition/detect-breed", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64 }),
-        });
+        const res = await fetch(
+          CONFIG.API_URL + "api/rekognition/detect-breed",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64 }),
+          }
+        );
         const data = await res.json();
         if (data.success && data.breed) {
           updateDogForm(idx, { breed: data.breed, uploading: false });
@@ -95,7 +99,7 @@ function Profile() {
       return;
     }
     try {
-      const res = await fetch("/api/user/dogs", {
+      const res = await fetch(CONFIG.API_URL + "api/user/dogs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
