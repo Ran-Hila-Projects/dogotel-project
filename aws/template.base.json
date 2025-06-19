@@ -1,0 +1,342 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "Dogotel Backend API for AWS Learner Lab",
+
+  "Globals": {
+    "Function": {
+      "Runtime": "nodejs20.x",
+      "Timeout": 30,
+      "MemorySize": 256
+    },
+    "Api": {
+      "Cors": {
+        "AllowMethods": "'GET,POST,PUT,DELETE,OPTIONS'",
+        "AllowHeaders": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "AllowOrigin": "'*'"
+      }
+    }
+  },
+
+  "Parameters": {
+    "ProjectName": { "Type": "String", "Default": "dogotel" },
+    "CognitoDomainPrefix": {
+      "Type": "String",
+      "Default": "dogotel-auth"
+    }
+  },
+
+  "Resources": {
+    "UserPool": {
+      "Type": "AWS::Cognito::UserPool",
+      "Properties": {
+        "UserPoolName": { "Fn::Sub": "${ProjectName}-UserPool" }
+      }
+    },
+
+    "UserPoolClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "ClientName": { "Fn::Sub": "${ProjectName}-WebClient" },
+        "UserPoolId": { "Ref": "UserPool" },
+        "GenerateSecret": false
+      }
+    },
+
+    "UserPoolDomain": {
+      "Type": "AWS::Cognito::UserPoolDomain",
+      "Properties": {
+        "UserPoolId": { "Ref": "UserPool" },
+        "Domain": { "Ref": "CognitoDomainPrefix" }
+      }
+    },
+
+    "ImagesBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": { "Fn::Sub": "${ProjectName}-images-${AWS::AccountId}" },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": false,
+          "BlockPublicPolicy": false,
+          "IgnorePublicAcls": false,
+          "RestrictPublicBuckets": false
+        }
+      }
+    },
+
+    "ImagesBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": { "Ref": "ImagesBucket" },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": { "Fn::Sub": "arn:aws:s3:::${ImagesBucket}/*" }
+            }
+          ]
+        }
+      }
+    },
+
+    "RoomsFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Rooms" },
+        "Handler": "rooms_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "DYNAMODB_TABLE_ROOMS": { "Ref": "RoomsTable" },
+            "DYNAMODB_TABLE_BOOKINGS": { "Ref": "BookingsTable" },
+            "S3_BUCKET": { "Ref": "ImagesBucket" }
+          }
+        },
+        "Events": {
+          "GetRooms": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms",
+              "Method": "get"
+            }
+          },
+          "GetRoom": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}",
+              "Method": "get"
+            }
+          },
+          "CreateRoom": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms",
+              "Method": "post"
+            }
+          },
+          "UpdateRoom": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}",
+              "Method": "put"
+            }
+          },
+          "DeleteRoom": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}",
+              "Method": "delete"
+            }
+          },
+          "GetUnavailableDates": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/unavailable-dates",
+              "Method": "get"
+            }
+          },
+          "GetUnavailableRanges": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/unavailable-ranges",
+              "Method": "get"
+            }
+          }
+        }
+      }
+    },
+
+    "BookingsFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Bookings" },
+        "Handler": "bookings_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "DYNAMODB_TABLE_BOOKINGS": { "Ref": "BookingsTable" },
+            "DYNAMODB_TABLE_ROOMS": { "Ref": "RoomsTable" },
+            "BOOKING_EVENTS_QUEUE_URL": { "Ref": "BookingEventsQueue" }
+          }
+        },
+        "Events": {
+          "GetBookings": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/bookings",
+              "Method": "get"
+            }
+          },
+          "CreateBooking": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/bookings",
+              "Method": "post"
+            }
+          }
+        }
+      }
+    },
+
+    "InitializeDataFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Initialize" },
+        "Handler": "initialize_data_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "ROOMS_TABLE": { "Ref": "RoomsTable" },
+            "USERS_TABLE": { "Ref": "UsersTable" },
+            "USER_POOL_ID": { "Ref": "UserPool" }
+          }
+        },
+        "Events": {
+          "InitializeData": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/admin/initialize",
+              "Method": "post"
+            }
+          }
+        }
+      }
+    },
+
+
+
+    "RoomsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelRooms",
+        "AttributeDefinitions": [
+          { "AttributeName": "room_id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "room_id", "KeyType": "HASH" }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "BookingsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelBookings",
+        "AttributeDefinitions": [
+          { "AttributeName": "bookingId", "AttributeType": "S" },
+          { "AttributeName": "userEmail", "AttributeType": "S" },
+          { "AttributeName": "room_id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "bookingId", "KeyType": "HASH" }
+        ],
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "UserBookingsIndex",
+            "KeySchema": [
+              { "AttributeName": "userEmail", "KeyType": "HASH" }
+            ],
+            "Projection": { "ProjectionType": "ALL" }
+          },
+          {
+            "IndexName": "RoomBookingsIndex",
+            "KeySchema": [
+              { "AttributeName": "room_id", "KeyType": "HASH" }
+            ],
+            "Projection": { "ProjectionType": "ALL" }
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "ReviewsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelReviews",
+        "AttributeDefinitions": [
+          { "AttributeName": "review_id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "review_id", "KeyType": "HASH" }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "DiningTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelDining",
+        "AttributeDefinitions": [
+          { "AttributeName": "dining_id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "dining_id", "KeyType": "HASH" }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "ServicesTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelServices",
+        "AttributeDefinitions": [
+          { "AttributeName": "service_id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "service_id", "KeyType": "HASH" }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "UsersTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelUsers",
+        "AttributeDefinitions": [
+          { "AttributeName": "email", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "email", "KeyType": "HASH" }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "BookingEventsQueue": { "Type": "AWS::SQS::Queue" },
+    "BookingConfirmationTopic": { "Type": "AWS::SNS::Topic" }
+  },
+
+  "Outputs": {
+    "DogotelApiUrl": {
+      "Description": "API Gateway endpoint URL",
+      "Value": {
+        "Fn::Sub": "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+      }
+    },
+
+    "ImagesBucketName": {
+      "Description": "S3 Bucket for images",
+      "Value": { "Ref": "ImagesBucket" }
+    },
+
+    "CognitoUserPoolId": {
+      "Description": "Cognito User Pool ID",
+      "Value": { "Ref": "UserPool" }
+    },
+
+    "CognitoUserPoolClientId": {
+      "Description": "Cognito User Pool Client ID",
+      "Value": { "Ref": "UserPoolClient" }
+    }
+  }
+} 
