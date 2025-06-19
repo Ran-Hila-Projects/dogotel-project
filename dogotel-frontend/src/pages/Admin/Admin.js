@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./Admin.css";
 import roomsData from "../../data/rooms";
+import CONFIG from "../../config";
 
 // Dummy data for bookings
 const demoBookings = [
@@ -214,6 +215,8 @@ function Admin({ userName }) {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     );
     setRooms(Object.values(roomsData));
+    // Example: fetch rooms from server (dummy, not used in UI)
+    // fetch(CONFIG.API_URL + "api/rooms").then(...)
   }, []);
 
   const handleAddRoom = (room) => {
@@ -229,10 +232,15 @@ function Admin({ userName }) {
       reviews: [],
     };
 
+    // Example: POST to server (dummy, not used in UI)
+    // fetch(CONFIG.API_URL + "api/rooms", { method: "POST", body: JSON.stringify(newRoom) })
+
     if (isEdit && selectedRoom) {
       setRooms((prev) =>
         prev.map((r) => (r.id === selectedRoom.id ? { ...r, ...newRoom } : r))
       );
+      // Example: PUT to server (dummy, not used in UI)
+      // fetch(CONFIG.API_URL + `api/rooms/${selectedRoom.id}`, { method: "PUT", body: JSON.stringify(newRoom) })
     } else {
       setRooms((prev) => [newRoom, ...prev]);
     }
@@ -251,6 +259,8 @@ function Admin({ userName }) {
   const handleDeleteRoom = (room) => {
     setSelectedRoom(room);
     setDeleteConfirmationOpen(true);
+    // Example: DELETE to server (dummy, not used in UI)
+    // fetch(CONFIG.API_URL + `api/rooms/${room.id}`, { method: "DELETE" })
   };
 
   const confirmDelete = () => {
