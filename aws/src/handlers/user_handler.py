@@ -21,23 +21,26 @@ bookings_table = dynamodb.Table(BOOKINGS_TABLE)
 
 def lambda_handler(event, context):
     """Main handler for user-related endpoints"""
-    
-    # Handle preflight requests
-    if event['httpMethod'] == 'OPTIONS':
-        return handle_preflight_request(event)
-    
     try:
+        http_method = event['httpMethod']
+        path = event['path']
         origin = extract_origin_from_event(event)
         
-        path = event['pathParameters']['proxy'] if event.get('pathParameters') and event['pathParameters'].get('proxy') else ''
-        http_method = event['httpMethod']
+        print(f"Processing {http_method} {path} from origin: {origin}")
         
-        print(f"User handler - Path: {path}, Method: {http_method}")
+        # Handle preflight OPTIONS requests
+        if http_method == 'OPTIONS':
+            return handle_preflight_request(event, origin=origin)
         
-        if path.startswith('user/') and http_method == 'GET':
+        print(f"Processing {http_method} {path}")
+        
+        if path.startswith('/user/') and path.count('/') == 2 and http_method == 'GET':
             email = path.split('/')[-1]
             return handle_get_user_profile(email, event)
-        elif path.startswith('bookings/') and http_method == 'GET':
+        elif path.startswith('/user/') and path.count('/') == 2 and http_method == 'PUT':
+            email = path.split('/')[-1]
+            return handle_update_user_profile(email, event)
+        elif path.startswith('/bookings/') and path.count('/') == 2 and http_method == 'GET':
             email = path.split('/')[-1]
             return handle_get_booking_history(email, event)
         else:
@@ -75,6 +78,76 @@ def handle_get_user_profile(email, event):
         
     except Exception as e:
         print(f"Get user profile error: {str(e)}")
+        return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
+
+def handle_update_user_profile(email, event):
+    """Handle PUT /api/user/:email - update user profile"""
+    try:
+        origin = extract_origin_from_event(event)
+        
+        body = json.loads(event['body'])
+        
+        # Validate email
+        if not email:
+            return cors_error_response(400, 'Email is required', origin)
+        
+        # Update fields that are provided
+        update_expression_parts = []
+        expression_attribute_values = {}
+        expression_attribute_names = {}
+        
+        if 'username' in body:
+            update_expression_parts.append('#username = :username')
+            expression_attribute_values[':username'] = body['username']
+            expression_attribute_names['#username'] = 'username'
+        
+        if 'birthdate' in body:
+            update_expression_parts.append('birthdate = :birthdate')
+            expression_attribute_values[':birthdate'] = body['birthdate']
+        
+        if 'photo' in body:
+            # Handle base64 image upload to S3
+            if body['photo'].startswith('data:image/'):
+                photo_url = upload_image_to_s3(body['photo'], f"users/{email}")
+            else:
+                photo_url = body['photo']
+            
+            update_expression_parts.append('photo = :photo')
+            expression_attribute_values[':photo'] = photo_url
+        
+        if not update_expression_parts:
+            return cors_error_response(400, 'No valid fields to update', origin)
+        
+        # Add updatedAt timestamp
+        update_expression_parts.append('updatedAt = :updatedAt')
+        expression_attribute_values[':updatedAt'] = datetime.utcnow().isoformat()
+        
+        update_expression = 'SET ' + ', '.join(update_expression_parts)
+        
+        # Update user in database
+        response = users_table.update_item(
+            Key={'email': email},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
+            ExpressionAttributeNames=expression_attribute_names if expression_attribute_names else None,
+            ReturnValues='ALL_NEW'
+        )
+        
+        updated_user = response['Attributes']
+        
+        return cors_response(200, {
+            'success': True,
+            'message': 'User profile updated successfully',
+            'user': {
+                'username': updated_user.get('username', ''),
+                'birthdate': updated_user.get('birthdate', ''),
+                'email': updated_user.get('email'),
+                'photo': updated_user.get('photo', 'https://via.placeholder.com/150')
+            }
+        }, origin)
+        
+    except Exception as e:
+        print(f"Update user profile error: {str(e)}")
         return cors_error_response(500, 'Internal server error', extract_origin_from_event(event))
 
 def handle_get_booking_history(email, event):

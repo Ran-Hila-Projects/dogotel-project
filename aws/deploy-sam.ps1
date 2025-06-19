@@ -85,12 +85,9 @@ Write-Host "Step 3: Retrieving deployment information..." -ForegroundColor Yello
 try {
     $outputs = aws cloudformation describe-stacks --stack-name $StackName --region $Region --query "Stacks[0].Outputs" --output json | ConvertFrom-Json
     
-    $apiUrl = ($outputs | Where-Object { $_.OutputKey -eq "ApiUrl" }).OutputValue
-    $websiteUrl = ($outputs | Where-Object { $_.OutputKey -eq "WebsiteUrl" }).OutputValue
-    $bucketName = ($outputs | Where-Object { $_.OutputKey -eq "WebsiteBucketName" }).OutputValue
-    $userPoolId = ($outputs | Where-Object { $_.OutputKey -eq "CognitoUserPoolId" }).OutputValue
-    $clientId = ($outputs | Where-Object { $_.OutputKey -eq "CognitoClientId" }).OutputValue
-    $deployedRegion = ($outputs | Where-Object { $_.OutputKey -eq "Region" }).OutputValue
+    $apiUrl = ($outputs | Where-Object { $_.OutputKey -eq "DogotelApiUrl" }).OutputValue
+    $bucketName = ($outputs | Where-Object { $_.OutputKey -eq "ImagesBucketName" }).OutputValue
+    $bucketUrl = ($outputs | Where-Object { $_.OutputKey -eq "ImagesBucketUrl" }).OutputValue
     
     Write-Host "✓ Deployment information retrieved successfully" -ForegroundColor Green
 } catch {
@@ -109,54 +106,59 @@ Write-Host ""
 Write-Host "🔐 AUTHENTICATION ENDPOINTS:" -ForegroundColor Cyan
 Write-Host "Register: POST $apiUrl/auth/register" -ForegroundColor White
 Write-Host "Login: POST $apiUrl/auth/login" -ForegroundColor White
+Write-Host "Logout: POST $apiUrl/auth/logout" -ForegroundColor White
 Write-Host ""
 Write-Host "🏠 ROOM ENDPOINTS:" -ForegroundColor Cyan
-Write-Host "Get Rooms: GET $apiUrl/rooms" -ForegroundColor White
-Write-Host "Get Room: GET $apiUrl/rooms/{room_id}" -ForegroundColor White
-Write-Host "Create Room (Admin): POST $apiUrl/admin/rooms" -ForegroundColor White
+Write-Host "Get All Rooms: GET $apiUrl/rooms" -ForegroundColor White
+Write-Host "Get Room Details: GET $apiUrl/rooms/{id}" -ForegroundColor White
+Write-Host "Get Room Unavailable Dates: GET $apiUrl/rooms/{id}/unavailable-dates" -ForegroundColor White
+Write-Host "Get Room Unavailable Ranges: GET $apiUrl/rooms/{id}/unavailable-ranges" -ForegroundColor White
+Write-Host "Create Room: POST $apiUrl/rooms" -ForegroundColor White
+Write-Host "Update Room: PUT $apiUrl/rooms/{id}" -ForegroundColor White
+Write-Host "Delete Room: DELETE $apiUrl/rooms/{id}" -ForegroundColor White
 Write-Host ""
 Write-Host "📅 BOOKING ENDPOINTS:" -ForegroundColor Cyan
+Write-Host "Get All Bookings: GET $apiUrl/bookings" -ForegroundColor White
+Write-Host "Get User Bookings: GET $apiUrl/bookings?userId={email}" -ForegroundColor White
 Write-Host "Create Booking: POST $apiUrl/bookings" -ForegroundColor White
-Write-Host "Get My Bookings: GET $apiUrl/bookings" -ForegroundColor White
-Write-Host "Cancel Booking: DELETE $apiUrl/bookings/{booking_id}" -ForegroundColor White
+Write-Host "Get Booking History: GET $apiUrl/bookings/{email}" -ForegroundColor White
 Write-Host ""
 Write-Host "⭐ REVIEW ENDPOINTS:" -ForegroundColor Cyan
-Write-Host "Get Room Reviews: GET $apiUrl/rooms/{room_id}/reviews" -ForegroundColor White
-Write-Host "Create Review: POST $apiUrl/reviews" -ForegroundColor White
+Write-Host "Add Review: POST $apiUrl/rooms/{id}/reviews" -ForegroundColor White
+Write-Host ""
+Write-Host "🍽️ DINING & SERVICES ENDPOINTS:" -ForegroundColor Cyan
+Write-Host "Get Dining Details: GET $apiUrl/dining/{id}" -ForegroundColor White
+Write-Host "Get Service Details: GET $apiUrl/services/{id}" -ForegroundColor White
+Write-Host ""
+Write-Host "👤 USER ENDPOINTS:" -ForegroundColor Cyan
+Write-Host "Get User Profile: GET $apiUrl/user/{email}" -ForegroundColor White
+Write-Host "Update User Profile: PUT $apiUrl/user/{email}" -ForegroundColor White
 Write-Host ""
 Write-Host "👨‍💼 ADMIN ENDPOINTS:" -ForegroundColor Cyan
 Write-Host "Dashboard: GET $apiUrl/admin/dashboard" -ForegroundColor White
-Write-Host "Reports: GET $apiUrl/admin/reports?type=revenue&period=30d" -ForegroundColor White
-Write-Host "All Bookings: GET $apiUrl/admin/bookings" -ForegroundColor White
-Write-Host "All Reviews: GET $apiUrl/admin/reviews" -ForegroundColor White
+Write-Host "Reports: GET $apiUrl/admin/reports" -ForegroundColor White
+Write-Host "Initialize Data: POST $apiUrl/admin/initialize" -ForegroundColor White
 Write-Host ""
-Write-Host "🌐 WEBSITE INFORMATION:" -ForegroundColor Cyan
-Write-Host "Website URL: $websiteUrl" -ForegroundColor White
+Write-Host "🖼️ IMAGES STORAGE:" -ForegroundColor Cyan
 Write-Host "S3 Bucket: $bucketName" -ForegroundColor White
-Write-Host ""
-Write-Host "🔑 COGNITO CONFIGURATION:" -ForegroundColor Cyan
-Write-Host "User Pool ID: $userPoolId" -ForegroundColor White
-Write-Host "Client ID: $clientId" -ForegroundColor White
-Write-Host "Region: $deployedRegion" -ForegroundColor White
+Write-Host "S3 URL: $bucketUrl" -ForegroundColor White
 Write-Host ""
 Write-Host "🚀 NEXT STEPS:" -ForegroundColor Cyan
 Write-Host "1. Initialize sample data: POST $apiUrl/admin/initialize" -ForegroundColor White
 Write-Host "2. Use upload-website.ps1 to deploy frontend files" -ForegroundColor White
 Write-Host "3. Test the API endpoints with the provided URLs" -ForegroundColor White
 Write-Host ""
-Write-Host "📋 SAMPLE CREDENTIALS (after initialization):" -ForegroundColor Cyan
-Write-Host "Admin: admin@dogotel.com / AdminPass123!" -ForegroundColor White
-Write-Host "User: user@example.com / UserPass123!" -ForegroundColor White
+Write-Host "📋 TEST THE APIS:" -ForegroundColor Cyan
+Write-Host "curl -X GET $apiUrl/rooms" -ForegroundColor White
+Write-Host "curl -X POST $apiUrl/admin/initialize" -ForegroundColor White
 Write-Host ""
 
 # Save configuration to file for frontend
 $config = @{
     apiUrl = $apiUrl
-    userPoolId = $userPoolId
-    clientId = $clientId
-    region = $deployedRegion
     bucketName = $bucketName
-    websiteUrl = $websiteUrl
+    bucketUrl = $bucketUrl
+    region = $Region
 } | ConvertTo-Json -Depth 2
 
 $config | Out-File -FilePath "deployment-config.json" -Encoding UTF8
@@ -165,7 +167,7 @@ Write-Host ""
 
 Write-Host "=== DEPLOYMENT COMPLETE ===" -ForegroundColor Green
 Write-Host "Stack Name: $StackName" -ForegroundColor Yellow
-Write-Host "Region: $deployedRegion" -ForegroundColor Yellow
+Write-Host "Region: $Region" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "To initialize sample data, run:" -ForegroundColor Cyan
 Write-Host "curl -X POST $apiUrl/admin/initialize" -ForegroundColor White 
