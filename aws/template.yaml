@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Dogotel Backend API - Complete Implementation
+Description: Dogotel Backend API - Essential Implementation
 
 Globals:
   Function:
@@ -17,8 +17,51 @@ Globals:
         BOOKING_EVENTS_QUEUE_URL: !Ref BookingEventsQueue
         BOOKING_CONFIRMATION_TOPIC_ARN: !Ref BookingConfirmationTopic
         S3_BUCKET: !Ref ImagesBucket
+        COGNITO_USER_POOL_ID: !Ref UserPool
+        COGNITO_USER_POOL_CLIENT_ID: !Ref UserPoolClient
 
 Resources:
+  # Cognito User Pool for Authentication
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: DogotelUsers
+      AliasAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: name
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: DogotelWebClient
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+
   # S3 Bucket for images
   ImagesBucket:
     Type: AWS::S3::Bucket
@@ -53,6 +96,11 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
       Cors:
         AllowMethods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD'"
         AllowHeaders: "'Accept,Accept-Language,Authorization,Content-Language,Content-Type,Origin,Referer,User-Agent,X-Amz-Date,X-Amz-Security-Token,X-Api-Key,X-Requested-With,X-Forwarded-For,X-Real-IP,Cache-Control,Pragma'"
@@ -70,49 +118,57 @@ Resources:
       CodeUri: src/handlers/
       Handler: rooms_handler.lambda_handler
       Events:
-        # GET /api/rooms
+        # GET /api/rooms (endpoint 1)
         GetRooms:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms
             Method: get
-        # GET /api/rooms/:id
+            Auth:
+              Authorizer: NONE
+        # GET /api/rooms/:id (endpoint 2)
         GetRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}
             Method: get
-        # GET /api/rooms/:id/unavailable-dates
+            Auth:
+              Authorizer: NONE
+        # GET /api/rooms/:id/unavailable-dates (endpoint 3)
         GetUnavailableDates:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/unavailable-dates
             Method: get
-        # GET /api/rooms/:id/unavailable-ranges
+            Auth:
+              Authorizer: NONE
+        # GET /api/rooms/:id/unavailable-ranges (endpoint 8)
         GetUnavailableRanges:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/unavailable-ranges
             Method: get
-        # POST /api/rooms
+            Auth:
+              Authorizer: NONE
+        # POST /api/rooms (endpoint 10) - Admin only
         CreateRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms
             Method: post
-        # PUT /api/rooms/:id
+        # PUT /api/rooms/:id (endpoint 11) - Admin only
         UpdateRoom:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}
             Method: put
-        # DELETE /api/rooms/:id
+        # DELETE /api/rooms/:id (endpoint 12) - Admin only
         DeleteRoom:
           Type: Api
           Properties:
@@ -126,24 +182,32 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /rooms
             Method: options
+            Auth:
+              Authorizer: NONE
         OptionsRoomId:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}
             Method: options
+            Auth:
+              Authorizer: NONE
         OptionsUnavailableDates:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/unavailable-dates
             Method: options
+            Auth:
+              Authorizer: NONE
         OptionsUnavailableRanges:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/unavailable-ranges
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RoomsTable
@@ -181,6 +245,8 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /bookings
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BookingsTable
@@ -200,59 +266,41 @@ Resources:
       CodeUri: src/handlers/
       Handler: dining_services_handler.lambda_handler
       Events:
-        # GET /api/dining (list all)
-        ListDining:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /dining
-            Method: get
-        # GET /api/services (list all)
-        ListServices:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /services
-            Method: get
-        # GET /api/dining/:id
+        # GET /api/dining/:id (endpoint 6)
         GetDining:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /dining/{id}
             Method: get
-        # GET /api/services/:id
+            Auth:
+              Authorizer: NONE
+        # GET /api/services/:id (endpoint 6)
         GetService:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /services/{id}
             Method: get
+            Auth:
+              Authorizer: NONE
         # OPTIONS for CORS
-        OptionsListDining:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /dining
-            Method: options
-        OptionsListServices:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /services
-            Method: options
         OptionsDining:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /dining/{id}
             Method: options
+            Auth:
+              Authorizer: NONE
         OptionsServices:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /services/{id}
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DiningTable
@@ -266,20 +314,13 @@ Resources:
       CodeUri: src/handlers/
       Handler: reviews_handler.lambda_handler
       Events:
-        # POST /api/rooms/:id/reviews
+        # POST /api/rooms/:id/reviews (endpoint 7)
         CreateReview:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/reviews
             Method: post
-        # GET /api/rooms/:id/reviews
-        GetReviews:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /rooms/{id}/reviews
-            Method: get
         # OPTIONS for CORS
         OptionsReviews:
           Type: Api
@@ -287,6 +328,8 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /rooms/{id}/reviews
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ReviewsTable
@@ -302,7 +345,7 @@ Resources:
       CodeUri: src/handlers/
       Handler: user_handler.lambda_handler
       Events:
-        # GET /api/user/:email
+        # GET /api/user/:email (endpoint 14)
         GetUserProfile:
           Type: Api
           Properties:
@@ -316,7 +359,7 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /user/{email}
             Method: put
-        # GET /api/bookings/:email
+        # GET /api/bookings/:email (endpoint 15)
         GetBookingHistory:
           Type: Api
           Properties:
@@ -330,12 +373,16 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /user/{email}
             Method: options
+            Auth:
+              Authorizer: NONE
         OptionsBookingHistory:
           Type: Api
           Properties:
             RestApiId: !Ref DogotelApi
             Path: /bookings/{email}
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
@@ -344,120 +391,7 @@ Resources:
         - S3FullAccessPolicy:
             BucketName: !Ref ImagesBucket
 
-  # Authentication Handler
-  AuthFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/handlers/
-      Handler: auth_handler.lambda_handler
-      Events:
-        # POST /api/auth/login
-        Login:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/login
-            Method: post
-        # POST /api/auth/register
-        Register:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/register
-            Method: post
-        # POST /api/auth/logout
-        Logout:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/logout
-            Method: post
-        # OPTIONS for CORS
-        OptionsLogin:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/login
-            Method: options
-        OptionsRegister:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/register
-            Method: options
-        OptionsLogout:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /auth/logout
-            Method: options
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-        - S3FullAccessPolicy:
-            BucketName: !Ref ImagesBucket
-
-  # Admin Dashboard Handler
-  AdminDashboardFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/handlers/
-      Handler: admin_dashboard_handler.lambda_handler
-      Events:
-        # GET /api/admin/dashboard
-        GetDashboard:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/dashboard
-            Method: get
-        # OPTIONS for CORS
-        OptionsDashboard:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/dashboard
-            Method: options
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BookingsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref ReviewsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-
-  # Admin Reports Handler
-  AdminReportsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/handlers/
-      Handler: admin_reports_handler.lambda_handler
-      Events:
-        # GET /api/admin/reports
-        GetReports:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/reports
-            Method: get
-        # OPTIONS for CORS
-        OptionsReports:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DogotelApi
-            Path: /admin/reports
-            Method: options
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref BookingsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RoomsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref ReviewsTable
-
-  # Initialize Data Handler
+  # Initialize Data Handler (for setup only)
   InitializeDataFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -471,6 +405,8 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /admin/initialize
             Method: post
+            Auth:
+              Authorizer: NONE
         # OPTIONS for CORS
         OptionsInitialize:
           Type: Api
@@ -478,6 +414,8 @@ Resources:
             RestApiId: !Ref DogotelApi
             Path: /admin/initialize
             Method: options
+            Auth:
+              Authorizer: NONE
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RoomsTable
@@ -625,4 +563,12 @@ Outputs:
     
   ImagesBucketUrl:
     Description: "S3 Bucket URL for images"
-    Value: !Sub "https://${ImagesBucket}.s3.amazonaws.com/" 
+    Value: !Sub "https://${ImagesBucket}.s3.amazonaws.com/"
+
+  CognitoUserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref UserPool
+
+  CognitoUserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref UserPoolClient 
