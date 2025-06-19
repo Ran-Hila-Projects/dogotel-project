@@ -38,6 +38,9 @@
 
 .review-stars {
   color: #ffd700; /* yellow stars */
+  margin-top: 4px;
+  position: relative;
+  left: -1px;
 }
 
 .review-text {

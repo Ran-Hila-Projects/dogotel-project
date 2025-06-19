@@ -14,7 +14,7 @@ import ProfilePage from "./pages/Profile/Profile";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const userName = "admin";
+  const userName = "Hila Tsivion";
 
   const handleLogout = () => {
     setIsLoggedIn(false);

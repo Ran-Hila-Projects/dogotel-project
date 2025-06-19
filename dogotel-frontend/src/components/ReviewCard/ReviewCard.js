@@ -1,6 +1,5 @@
 import React from "react";
 import "./ReviewCard.css";
-import Avatar from "../../assets/images/avatar-placeholder.jpg";
 import { ReactComponent as FullStar } from "../../assets/icons/star-full.svg";
 import { ReactComponent as EmptyStar } from "../../assets/icons/star-empty.svg";
 
@@ -11,7 +10,6 @@ function ReviewCard({ name, stars, review }) {
   return (
     <div className="review-card">
       <div className="review-header">
-        <img src={Avatar} alt="User profile" className="review-avatar" />
         <div className="review-name-stars">
           <h6>{name}</h6>
           <div className="review-stars">

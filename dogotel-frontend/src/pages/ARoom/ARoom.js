@@ -36,6 +36,83 @@ function ARoom() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [showReviewPopup, setShowReviewPopup] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
+  // TODO: Replace with real user from auth context
+  const currentUser = {
+    email: "user@example.com",
+    id: "user-1",
+    name: "Hila Tsivion",
+  };
+
+  // --- DUMMY LOGIC ---
+  // Demo: pretend we fetch user bookings for this room
+  const userBookingsForRoom = [
+    { bookingId: "b1", roomId: roomId, status: "completed" },
+  ];
+  // Demo: pretend we fetch user reviews for this room
+  const userHasReviewed =
+    roomData && roomData.reviews.some((r) => r.name === currentUser.name);
+
+  // --- REAL LOGIC (parallel, not used in UI yet) ---
+  const [realUserBookingsForRoom, setRealUserBookingsForRoom] = useState([]);
+  const [realUserHasReviewed, setRealUserHasReviewed] = useState(false);
+  useEffect(() => {
+    if (!currentUser.email || !roomId) return;
+    // Fetch real user bookings for this room
+    fetch(CONFIG.API_URL + `api/bookings/${currentUser.email}`)
+      .then((res) => res.json())
+      .then((history) => {
+        if (Array.isArray(history)) {
+          const filtered = history.filter((b) => b.roomId === roomId);
+          setRealUserBookingsForRoom(filtered);
+        }
+      })
+      .catch((err) => {
+        // Optionally handle error
+        setRealUserBookingsForRoom([]);
+      });
+    // Optionally, fetch real reviews for this room and user
+    // fetch(CONFIG.API_URL + `api/rooms/${roomId}/reviews`).then(...)
+    // setRealUserHasReviewed(...)
+  }, [currentUser.email, roomId]);
+
+  // --- ENABLE REVIEW BUTTON LOGIC ---
+  // TODO: Replace dummy logic with real logic below
+  const canAddReview =
+    (userBookingsForRoom.length > 0 || realUserBookingsForRoom.length > 0) &&
+    !userHasReviewed &&
+    !realUserHasReviewed;
+
+  const handleReviewSubmit = async ({ stars, text }) => {
+    // DUMMY: In real app, POST to server
+    alert(`Review submitted: ${stars} stars, text: ${text}`);
+    setShowReviewPopup(false);
+    // Optionally, refresh reviews
+
+    // --- REAL LOGIC (not used in UI yet) ---
+    try {
+      const res = await fetch(CONFIG.API_URL + `api/rooms/${roomId}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: currentUser.email,
+          stars,
+          text,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to submit review");
+      // Optionally handle success
+      // Optionally refresh reviews
+    } catch (err) {
+      // Optionally show error in UI
+      console.error("Error submitting review:", err);
+    }
+  };
+
+  const handleBookingSave = (data) => {
+    setBookingOpen(false);
+    setToastOpen(true);
+    // Optionally show a success message
+  };
 
   useEffect(() => {
     setRoomData(null);
@@ -45,32 +122,6 @@ function ARoom() {
   if (!roomData) {
     return <Loader />;
   }
-
-  // Demo: get current user (in real app, get from auth context)
-  const currentUser = { id: "user-1", name: "Hila Tsivion" };
-  // Demo: pretend we fetch user bookings for this room
-  const userBookingsForRoom = [
-    { bookingId: "b1", roomId: roomData.id, status: "completed" },
-  ];
-  // Demo: pretend we fetch user reviews for this room
-  const userHasReviewed = roomData.reviews.some(
-    (r) => r.name === currentUser.name
-  );
-  const canAddReview = userBookingsForRoom.length > 0 && !userHasReviewed;
-
-  const handleReviewSubmit = ({ stars, text }) => {
-    // Example: POST to server (dummy, not used in UI)
-    // fetch(CONFIG.API_URL + `api/rooms/${roomData.id}/reviews`, { method: "POST", body: JSON.stringify({ stars, text }) })
-    alert(`Review submitted: ${stars} stars, text: ${text}`);
-    setShowReviewPopup(false);
-    // Optionally, refresh reviews
-  };
-
-  const handleBookingSave = (data) => {
-    setBookingOpen(false);
-    setToastOpen(true);
-    // Optionally show a success message
-  };
 
   return (
     <div className="aroom-page">
