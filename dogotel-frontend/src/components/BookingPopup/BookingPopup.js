@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./BookingPopup.css";
-
-// Demo unavailableRanges for testing
-const demoUnavailableRanges = [
-  { start: "2025-07-10", end: "2025-07-12" },
-  { start: "2025-07-20", end: "2025-07-20" },
-  { start: "2026-01-14", end: "2026-01-14" },
-];
+import CONFIG from "../../config";
 
 function getNextUnavailableDate(startDate, unavailableDates) {
   const start = new Date(startDate);
@@ -28,15 +22,14 @@ function isRangeContinuous(start, end, unavailableDates) {
   return true;
 }
 
-// unavailableRanges: [{start: 'YYYY-MM-DD', end: 'YYYY-MM-DD'}, ...]
 function getUnavailableDatesFromRanges(ranges) {
   const dates = [];
   for (const range of ranges) {
-    let d = new Date(range.start);
+    let current = new Date(range.start);
     const end = new Date(range.end);
-    while (d <= end) {
-      dates.push(d.toISOString().split("T")[0]);
-      d.setDate(d.getDate() + 1);
+    while (current <= end) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
     }
   }
   return dates;
@@ -49,8 +42,6 @@ function BookingPopup({
   roomTitle,
   onSave,
   dogsAmount = 1,
-  // unavailableRanges = [], לשים את זה אחרי שמעבירים לשרת
-  unavailableRanges = demoUnavailableRanges,
   rooms = [], // Pass rooms if available for price lookup
 }) {
   const [startDate, setStartDate] = useState("");
@@ -65,8 +56,37 @@ function BookingPopup({
   );
   const [error, setError] = useState("");
   const [showFieldErrors, setShowFieldErrors] = useState(false);
+  const [unavailableRanges, setUnavailableRanges] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // In the future, fetch unavailableRanges from the server for this roomId
+  // Fetch unavailable ranges when roomId changes
+  useEffect(() => {
+    if (roomId && open) {
+      fetchUnavailableRanges();
+    }
+  }, [roomId, open]);
+
+  const fetchUnavailableRanges = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${CONFIG.API_URL}rooms/${roomId}/unavailable-ranges`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setUnavailableRanges(data.unavailableRanges || []);
+      } else {
+        console.error("Failed to fetch unavailable ranges");
+        setUnavailableRanges([]);
+      }
+    } catch (error) {
+      console.error("Error fetching unavailable ranges:", error);
+      setUnavailableRanges([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const unavailableDates = getUnavailableDatesFromRanges(unavailableRanges);
 
   useEffect(() => {
@@ -80,10 +100,9 @@ function BookingPopup({
     );
     setError("");
     setShowFieldErrors(false);
+    setStartDate("");
+    setEndDate("");
   }, [dogsAmount, open]);
-
-  // In the future, fetch unavailable dates for this roomId
-  // useEffect(() => { fetchUnavailableDates(roomId) }, [roomId]);
 
   const handleDogChange = (index, field, value) => {
     setDogs((prev) => {
@@ -140,20 +159,25 @@ function BookingPopup({
     }
     setError("");
     setShowFieldErrors(false);
+    
+    // Find room details for pricing
+    let pricePerNight = 0;
+    if (rooms && rooms.length > 0 && roomId) {
+      const foundRoom = rooms.find((r) => r.id === roomId);
+      if (foundRoom) {
+        pricePerNight = foundRoom.price || foundRoom.pricePerNight || 0;
+      }
+    }
+    
     const bookingDetails = {
+      roomId: roomId, // Backend expects roomId
       startDate,
       endDate,
       dogs,
-      roomId,
       roomTitle,
+      pricePerNight: pricePerNight
     };
-    // Add pricePerNight if possible
-    if (rooms && rooms.length > 0 && roomId) {
-      const foundRoom = rooms.find((r) => r.id === roomId);
-      if (foundRoom && foundRoom.pricePerNight) {
-        bookingDetails.pricePerNight = foundRoom.pricePerNight;
-      }
-    }
+    
     // Save to localStorage (merge with existing cart if present)
     let cart = {};
     try {
@@ -187,6 +211,7 @@ function BookingPopup({
           &times;
         </button>
         <h2>Book Your Stay</h2>
+        {loading && <p>Loading availability...</p>}
         <div className="calendar-section">
           <label>Choose your stay dates:</label>
           <input
@@ -194,6 +219,7 @@ function BookingPopup({
             value={startDate}
             min={today}
             onChange={(e) => handleStartDateChange(e.target.value)}
+            disabled={loading}
           />
           <span style={{ margin: "0 10px" }}>to</span>
           <input
@@ -202,7 +228,7 @@ function BookingPopup({
             min={endMin}
             max={endMax}
             onChange={(e) => setEndDate(e.target.value)}
-            disabled={!startDate}
+            disabled={!startDate || loading}
           />
         </div>
         <div className="dog-info-section">
@@ -273,7 +299,7 @@ function BookingPopup({
         {error && (
           <div style={{ color: "#bb7c48", marginBottom: 10 }}>{error}</div>
         )}
-        <button className="save-btn" onClick={handleSave}>
+        <button className="save-btn" onClick={handleSave} disabled={loading}>
           Save
         </button>
       </div>

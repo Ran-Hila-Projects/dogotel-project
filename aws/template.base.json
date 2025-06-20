@@ -243,7 +243,8 @@
           "Variables": {
             "ROOMS_TABLE": { "Ref": "RoomsTable" },
             "USERS_TABLE": { "Ref": "UsersTable" },
-            "USER_POOL_ID": { "Ref": "UserPool" }
+            "USER_POOL_ID": { "Ref": "UserPool" },
+            "IMAGES_BUCKET": { "Ref": "ImagesBucket" }
           }
         },
         "Events": {
@@ -252,6 +253,32 @@
             "Properties": {
               "Path": "/admin/initialize",
               "Method": "post"
+            }
+          }
+        }
+      }
+    },
+
+    "RekognitionFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Rekognition" },
+        "Handler": "rekognition_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Events": {
+          "DetectBreed": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/api/rekognition/detect-breed",
+              "Method": "post"
+            }
+          },
+          "DetectBreedOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/api/rekognition/detect-breed",
+              "Method": "options"
             }
           }
         }

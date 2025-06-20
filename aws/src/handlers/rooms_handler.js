@@ -140,11 +140,21 @@ async function handleGetUnavailableDates(roomId, event) {
 
         const unavailableDates = [];
         for (const booking of result.Items || []) {
-            const checkIn = new Date(booking.check_in.replace('Z', ''));
-            const checkOut = new Date(booking.check_out.replace('Z', ''));
+            // Handle both old and new date formats
+            const bookingCheckIn = new Date(
+                booking.check_in || booking.room?.startDate || booking.startDate
+            );
+            const bookingCheckOut = new Date(
+                booking.check_out || booking.room?.endDate || booking.endDate
+            );
 
-            let currentDate = new Date(checkIn);
-            const endDate = new Date(checkOut);
+            if (isNaN(bookingCheckIn.getTime()) || isNaN(bookingCheckOut.getTime())) {
+                console.log('Invalid dates in booking:', booking);
+                continue;
+            }
+
+            let currentDate = new Date(bookingCheckIn);
+            const endDate = new Date(bookingCheckOut);
 
             while (currentDate < endDate) {
                 unavailableDates.push(currentDate.toISOString().split('T')[0]);
@@ -182,15 +192,25 @@ async function handleGetUnavailableRanges(roomId, event) {
 
         const unavailableRanges = [];
         for (const booking of result.Items || []) {
-            const checkInDate = new Date(booking.check_in.replace('Z', ''));
-            const checkOutDate = new Date(booking.check_out.replace('Z', ''));
+            // Handle both old and new date formats
+            const bookingCheckIn = new Date(
+                booking.check_in || booking.room?.startDate || booking.startDate
+            );
+            const bookingCheckOut = new Date(
+                booking.check_out || booking.room?.endDate || booking.endDate
+            );
+
+            if (isNaN(bookingCheckIn.getTime()) || isNaN(bookingCheckOut.getTime())) {
+                console.log('Invalid dates in booking:', booking);
+                continue;
+            }
 
             // Adjust checkout date (booking ends day before checkout)
-            const actualEndDate = new Date(checkOutDate);
+            const actualEndDate = new Date(bookingCheckOut);
             actualEndDate.setDate(actualEndDate.getDate() - 1);
 
             unavailableRanges.push({
-                start: checkInDate.toISOString().split('T')[0],
+                start: bookingCheckIn.toISOString().split('T')[0],
                 end: actualEndDate.toISOString().split('T')[0]
             });
         }
@@ -334,8 +354,18 @@ async function isRoomAvailable(roomId, checkIn, checkOut) {
         const requestCheckOut = new Date(checkOut);
 
         for (const booking of result.Items || []) {
-            const bookingCheckIn = new Date(booking.check_in);
-            const bookingCheckOut = new Date(booking.check_out);
+            // Handle both old and new date formats
+            const bookingCheckIn = new Date(
+                booking.check_in || booking.room?.startDate || booking.startDate
+            );
+            const bookingCheckOut = new Date(
+                booking.check_out || booking.room?.endDate || booking.endDate
+            );
+
+            if (isNaN(bookingCheckIn.getTime()) || isNaN(bookingCheckOut.getTime())) {
+                console.log('Invalid dates in booking:', booking);
+                continue;
+            }
 
             // Check for overlap
             if (requestCheckIn < bookingCheckOut && requestCheckOut > bookingCheckIn) {

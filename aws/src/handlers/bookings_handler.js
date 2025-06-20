@@ -242,8 +242,18 @@ async function isRoomAvailable(roomId, checkIn, checkOut) {
         const requestCheckOut = new Date(checkOut);
 
         for (const booking of result.Items || []) {
-            const bookingCheckIn = new Date(booking.check_in || booking.room?.startDate);
-            const bookingCheckOut = new Date(booking.check_out || booking.room?.endDate);
+            // Handle both old and new date formats
+            const bookingCheckIn = new Date(
+                booking.check_in || booking.room?.startDate || booking.startDate
+            );
+            const bookingCheckOut = new Date(
+                booking.check_out || booking.room?.endDate || booking.endDate
+            );
+
+            if (isNaN(bookingCheckIn.getTime()) || isNaN(bookingCheckOut.getTime())) {
+                console.log('Invalid dates in booking:', booking);
+                continue;
+            }
 
             // Check for overlap
             if (requestCheckIn < bookingCheckOut && requestCheckOut > bookingCheckIn) {

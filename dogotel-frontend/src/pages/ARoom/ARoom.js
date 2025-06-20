@@ -10,19 +10,23 @@ import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import ReviewWritingPopup from "../../components/ReviewWritingPopup/ReviewWritingPopup";
 import Toast from "../../components/Toast/Toast";
-import rooms from "../../data/rooms";
 import CONFIG from "../../config";
 
-// Simulate async fetch call for room data
+// Fetch room data from API
 async function fetchRoomDataAsync(roomId) {
-  // Example: fetch from server (dummy, not used in UI)
-  // const response = await fetch(CONFIG.API_URL + `api/rooms/${roomId}`);
-  // const data = await response.json();
-  // return data;
-  // Simulate network delay
-  await new Promise((res) => setTimeout(res, 300));
-  // Use the imported rooms data
-  return rooms[roomId] || null;
+  try {
+    console.log("Fetching room data for ID:", roomId);
+    const response = await fetch(CONFIG.API_URL + `rooms/${roomId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log("Fetched room data:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching room data:", error);
+    return null;
+  }
 }
 
 function useQuery() {

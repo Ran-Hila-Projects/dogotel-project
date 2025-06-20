@@ -97,12 +97,27 @@ function Profile() {
   const handleDogPhotoChange = async (e, idx) => {
     const file = e.target.files[0];
     if (!file) return;
-    updateDogForm(idx, { uploading: true, error: "" });
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      updateDogForm(idx, { error: "Please select a valid image file" });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      updateDogForm(idx, { error: "Image must be smaller than 5MB" });
+      return;
+    }
+
+    updateDogForm(idx, { uploading: true, error: "", breedDetected: "" });
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result;
       updateDogForm(idx, { photo: base64, uploading: true, error: "" });
+      
       try {
+        console.log("Sending image to Rekognition...");
         const res = await fetch(
           CONFIG.API_URL + "api/rekognition/detect-breed",
           {
@@ -111,19 +126,40 @@ function Profile() {
             body: JSON.stringify({ image: base64 }),
           }
         );
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
         const data = await res.json();
+        console.log("Rekognition response:", data);
+        
         if (data.success && data.breed) {
-          updateDogForm(idx, { breed: data.breed, uploading: false });
+          updateDogForm(idx, { 
+            breed: data.breed, 
+            uploading: false,
+            breedDetected: `✅ Detected: ${data.breed} (${data.confidence}% confidence)`,
+            error: ""
+          });
+        } else if (data.error) {
+          updateDogForm(idx, {
+            uploading: false,
+            error: data.error,
+            breedDetected: ""
+          });
         } else {
           updateDogForm(idx, {
             uploading: false,
-            error: "Could not identify breed",
+            error: "Could not identify breed. Please enter manually.",
+            breedDetected: ""
           });
         }
       } catch (err) {
+        console.error("Rekognition error:", err);
         updateDogForm(idx, {
           uploading: false,
-          error: "Error identifying breed",
+          error: "Error analyzing image. Please enter breed manually.",
+          breedDetected: ""
         });
       }
     };
@@ -305,13 +341,24 @@ function Profile() {
                     value={dogForm.breed}
                     onChange={(e) => handleDogFormChange(e, idx)}
                     required
-                    readOnly={!!dogForm.photo}
                     className="profile-input"
+                    placeholder={dogForm.uploading ? "Analyzing image..." : "Enter breed or upload photo"}
                   />
                 </label>
-                {dogForm.uploading && <div>Identifying breed...</div>}
+                {dogForm.uploading && (
+                  <div style={{ color: "#3498db", fontSize: "14px", margin: "5px 0" }}>
+                    🔍 Identifying breed...
+                  </div>
+                )}
+                {dogForm.breedDetected && (
+                  <div style={{ color: "#27ae60", fontSize: "14px", margin: "5px 0" }}>
+                    {dogForm.breedDetected}
+                  </div>
+                )}
                 {dogForm.error && (
-                  <div className="dog-form-error">{dogForm.error}</div>
+                  <div className="dog-form-error" style={{ color: "#e74c3c", fontSize: "14px", margin: "5px 0" }}>
+                    {dogForm.error}
+                  </div>
                 )}
                 <div className="dog-form-btn-row">
                   <button

@@ -1,6 +1,6 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
-const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, CreateGroupCommand, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
 const { v4: uuidv4 } = require('uuid');
 const { corsResponse, corsErrorResponse, handlePreflightRequest, extractOriginFromEvent } = require('./cors_utils');
 
@@ -13,6 +13,7 @@ const cognitoClient = new CognitoIdentityProviderClient({});
 const ROOMS_TABLE = process.env.ROOMS_TABLE || 'DogotelRooms';
 const USERS_TABLE = process.env.USERS_TABLE || 'DogotelUsers';
 const USER_POOL_ID = process.env.USER_POOL_ID;
+const IMAGES_BUCKET = process.env.IMAGES_BUCKET || process.env.S3_BUCKET;
 
 exports.handler = async (event, context) => {
     console.log('Event:', JSON.stringify(event, null, 2));
@@ -43,49 +44,35 @@ exports.handler = async (event, context) => {
 async function handleInitializeData(event) {
     try {
         const origin = extractOriginFromEvent(event);
+        const body = JSON.parse(event.body || '{}');
+        const { roomsData } = body;
 
-        console.log('Starting data initialization...');
+        console.log('Initializing data...');
 
-        const results = {
-            rooms: { success: 0, total: 0 },
-            users: { success: 0, total: 0 },
-            dining: { success: 0, total: 0 },
-            services: { success: 0, total: 0 }
-        };
+        const results = {};
 
-        // Parse request body for custom room data
-        let roomData = null;
-        if (event.body) {
-            try {
-                const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-                roomData = body.rooms;
-                console.log('Received room data:', roomData ? roomData.length : 0, 'rooms');
-            } catch (parseError) {
-                console.error('Error parsing request body:', parseError);
-            }
-        }
-
-        // Create rooms (from request body or sample data)
-        const roomResults = roomData ? await createRoomsFromData(roomData) : await createSampleRooms();
-        results.rooms = roomResults;
+        // Create admin group in Cognito
+        results.adminGroup = await createAdminGroup();
 
         // Create admin user
-        const userResults = await createAdminUser();
-        results.users = userResults;
+        results.adminUser = await createAdminUser();
+
+        // Create sample rooms if provided
+        if (roomsData && Array.isArray(roomsData)) {
+            results.rooms = await createRoomsFromData(roomsData);
+        } else {
+            results.rooms = await createSampleRooms();
+        }
 
         // Create sample dining options
-        const diningResults = await createSampleDining();
-        results.dining = diningResults;
+        results.dining = await createSampleDining();
 
         // Create sample services
-        const servicesResults = await createSampleServices();
-        results.services = servicesResults;
-
-        console.log('Data initialization completed:', results);
+        results.services = await createSampleServices();
 
         return corsResponse(200, {
             success: true,
-            message: 'Data initialization completed successfully',
+            message: 'Data initialization completed',
             results: results
         }, origin);
     } catch (error) {
@@ -95,6 +82,9 @@ async function handleInitializeData(event) {
 }
 
 async function createSampleRooms() {
+    // Generate the S3 image base URL
+    const imageBaseUrl = IMAGES_BUCKET ? `https://${IMAGES_BUCKET}.s3.amazonaws.com/images/rooms/` : '';
+    
     const sampleRooms = [
         {
             room_id: '1',
@@ -104,7 +94,7 @@ async function createSampleRooms() {
             dogsAmount: 1,
             price: 55,
             size: '30m²',
-            image: 'https://example.com/room1.jpg',
+            image: `${imageBaseUrl}room-1.jpg`,
             included: ['Daily housekeeping', 'Premium bedding', 'Climate control', 'Feeding service'],
             reviews: [
                 { name: 'Hila', stars: 5, review: 'Perfect for my small dog! Very clean and comfortable.' },
@@ -122,7 +112,7 @@ async function createSampleRooms() {
             dogsAmount: 1,
             price: 85,
             size: '50m²',
-            image: 'https://example.com/room2.jpg',
+            image: `${imageBaseUrl}room-2.png`,
             included: ['Private outdoor run', 'Premium bedding', 'Personalized care', 'Gourmet treats', 'Grooming service'],
             reviews: [
                 { name: 'Sarah', stars: 5, review: 'Absolutely amazing! My dog was treated like royalty.' },
@@ -140,7 +130,7 @@ async function createSampleRooms() {
             dogsAmount: 3,
             price: 25,
             size: '25m²',
-            image: 'https://example.com/room3.jpg',
+            image: `${imageBaseUrl}room-3.png`,
             included: ['Shared play area', 'Basic bedding', 'Daily walks'],
             reviews: [
                 { name: 'Lisa', stars: 4, review: 'Great value for money. My dogs were happy.' },
@@ -158,7 +148,7 @@ async function createSampleRooms() {
             dogsAmount: 1,
             price: 120,
             size: '80m²',
-            image: 'https://example.com/room4.jpg',
+            image: `${imageBaseUrl}room-4.png`,
             included: ['Private garden', 'Premium bedding', '24/7 care', 'Gourmet meals', 'Spa services', 'Live webcam'],
             reviews: [
                 { name: 'Emma', stars: 5, review: 'The best boarding experience ever! Highly recommend.' },
@@ -176,7 +166,7 @@ async function createSampleRooms() {
             dogsAmount: 4,
             price: 55,
             size: '60m²',
-            image: 'https://example.com/room5.jpg',
+            image: `${imageBaseUrl}room-5.png`,
             included: ['Large play area', 'Multiple beds', 'Group activities', 'Extended playtime'],
             reviews: [
                 { name: 'Anna', stars: 5, review: 'Perfect for my three dogs! They loved playing together.' },
@@ -243,11 +233,42 @@ async function createRoomsFromData(roomsData) {
     return { success: successCount, total: roomsData.length };
 }
 
+async function createAdminGroup() {
+    try {
+        const groupName = 'Admins';
+        const groupDescription = 'Dogotel Administrators Group';
+
+        // Create admin group in Cognito
+        try {
+            await cognitoClient.send(new CreateGroupCommand({
+                UserPoolId: USER_POOL_ID,
+                GroupName: groupName,
+                Description: groupDescription,
+                Precedence: 1 // Higher precedence for admin group
+            }));
+
+            console.log(`Created Cognito admin group: ${groupName}`);
+        } catch (error) {
+            if (error.name === 'GroupExistsException') {
+                console.log(`Admin group ${groupName} already exists in Cognito`);
+            } else {
+                throw error;
+            }
+        }
+
+        return { success: 1, total: 1 };
+    } catch (error) {
+        console.error('Error creating admin group:', error);
+        return { success: 0, total: 1 };
+    }
+}
+
 async function createAdminUser() {
     try {
         const adminEmail = 'admin@dogotel.com';
         const tempPassword = 'TempPass123!';
         const permanentPassword = 'AdminPass123!';
+        const adminGroupName = 'Admins';
 
         // Create user in Cognito
         try {
@@ -271,10 +292,31 @@ async function createAdminUser() {
                 Permanent: true
             }));
 
-            console.log(`Created Cognito admin user: ${adminEmail}`);
+            // Add user to admin group
+            await cognitoClient.send(new AdminAddUserToGroupCommand({
+                UserPoolId: USER_POOL_ID,
+                Username: adminEmail,
+                GroupName: adminGroupName
+            }));
+
+            console.log(`Created Cognito admin user: ${adminEmail} and added to group: ${adminGroupName}`);
         } catch (error) {
             if (error.name === 'UsernameExistsException') {
                 console.log(`Admin user ${adminEmail} already exists in Cognito`);
+                
+                // Try to add to group even if user exists
+                try {
+                    await cognitoClient.send(new AdminAddUserToGroupCommand({
+                        UserPoolId: USER_POOL_ID,
+                        Username: adminEmail,
+                        GroupName: adminGroupName
+                    }));
+                    console.log(`Added existing admin user to group: ${adminGroupName}`);
+                } catch (groupError) {
+                    if (groupError.name !== 'UserAlreadyInGroupException') {
+                        console.error('Error adding user to admin group:', groupError);
+                    }
+                }
             } else {
                 throw error;
             }

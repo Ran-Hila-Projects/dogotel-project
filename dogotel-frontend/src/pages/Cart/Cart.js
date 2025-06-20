@@ -4,6 +4,7 @@ import Toast from "../../components/Toast/Toast";
 import ReactConfetti from "react-confetti";
 import CONFIG from "../../config";
 import Loader from "../../components/Loader/Loader";
+import { useNavigate } from "react-router-dom";
 
 function BookingSuccessModal({ open, dogNames, onClose }) {
   if (!open) return null;
@@ -32,6 +33,7 @@ function Cart() {
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
   const [dogNames, setDogNames] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     try {
@@ -68,32 +70,81 @@ function Cart() {
   const handleBookNow = async () => {
     setBookingLoading(true);
     setBookingError("");
+    
     try {
-      // Dummy async function to simulate booking
-      await new Promise((res) => setTimeout(res, 1200));
-      // Uncomment below for real API call:
-      // const response = await fetch(CONFIG.API_URL + "api/bookings", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(cart),
-      // });
-      // if (!response.ok) throw new Error("Booking failed. Please try again.");
-      // Optionally clear cart or update UI
-      const dogs =
-        cart.room && cart.room.dogs ? cart.room.dogs.map((d) => d.name) : [];
+      // Get user email from localStorage or auth context
+      const userEmail = localStorage.getItem("userEmail") || "user@example.com"; // TODO: Get from actual auth
+      
+      // Prepare booking data according to backend expectations
+      const bookingData = {
+        userEmail: userEmail,
+        room: {
+          roomId: cart.room.roomId,
+          startDate: cart.room.startDate,
+          endDate: cart.room.endDate,
+          dogs: cart.room.dogs,
+          roomTitle: cart.room.roomTitle,
+          pricePerNight: cart.room.pricePerNight
+        },
+        dining: cart.dining,
+        services: cart.services || [],
+        totalPrice: totalPrice
+      };
+
+      console.log("Submitting booking:", bookingData);
+
+      const response = await fetch(CONFIG.API_URL + "bookings", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          // Add authorization header if available
+          ...(localStorage.getItem("authToken") && {
+            "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+          })
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Booking failed. Please try again.");
+      }
+
+      const result = await response.json();
+      console.log("Booking successful:", result);
+
+      // Clear the cart after successful booking
+      localStorage.removeItem("dogotelBooking");
+      setCart({});
+
+      const dogs = cart.room && cart.room.dogs ? cart.room.dogs.map((d) => d.name) : [];
       setDogNames(dogs);
       setSuccessModalOpen(true);
       setConfettiActive(true);
       setTimeout(() => setConfettiActive(false), 3500);
+      
+      // Redirect to home page after showing success modal for 2 seconds
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+      
     } catch (e) {
+      console.error("Booking error:", e);
       setBookingError(e.message || "Booking failed. Please try again.");
     } finally {
       setBookingLoading(false);
     }
   };
 
+  const handleSuccessModalClose = () => {
+    setSuccessModalOpen(false);
+    // Immediately navigate to home when modal is closed manually
+    navigate("/");
+  };
+
   return (
     <div className="cart-page">
+      {confettiActive && <ReactConfetti />}
       {bookingLoading && (
         <div
           style={{
@@ -243,21 +294,8 @@ function Cart() {
       <BookingSuccessModal
         open={successModalOpen}
         dogNames={dogNames}
-        onClose={() => setSuccessModalOpen(false)}
+        onClose={handleSuccessModalClose}
       />
-      {confettiActive && (
-        <ReactConfetti
-          numberOfPieces={120}
-          recycle={false}
-          width={window.innerWidth}
-          height={window.innerHeight}
-          confettiSource={{ x: 0, y: 0, w: window.innerWidth, h: 0 }}
-          drawShape={(ctx) => {
-            ctx.font = "40px serif";
-            ctx.fillText("🐶", 0, 0);
-          }}
-        />
-      )}
     </div>
   );
 }
