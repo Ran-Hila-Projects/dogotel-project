@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Auth Endpoints</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; }
+        .response { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>DogoTel Auth Endpoint Test</h1>
+    
+    <div class="section">
+        <h2>Test Registration</h2>
+        <button onclick="testRegister()">Test Register</button>
+        <div id="registerResponse" class="response"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test Login</h2>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="loginResponse" class="response"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test OPTIONS (CORS Preflight)</h2>
+        <button onclick="testOptions()">Test CORS</button>
+        <div id="optionsResponse" class="response"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://qt39qbbjq3.execute-api.us-east-1.amazonaws.com/Prod/';
+        
+        function log(elementId, message) {
+            document.getElementById(elementId).textContent = message;
+        }
+
+        async function testOptions() {
+            try {
+                log('optionsResponse', 'Testing OPTIONS request...');
+                
+                const response = await fetch(`${API_URL}auth/register`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const headers = {};
+                for (let [key, value] of response.headers.entries()) {
+                    headers[key] = value;
+                }
+                
+                log('optionsResponse', `Status: ${response.status}\nHeaders: ${JSON.stringify(headers, null, 2)}`);
+            } catch (error) {
+                log('optionsResponse', `Error: ${error.message}`);
+            }
+        }
+
+        async function testRegister() {
+            try {
+                log('registerResponse', 'Testing registration...');
+                
+                const response = await fetch(`${API_URL}auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName: 'Test',
+                        lastName: 'User',
+                        email: 'test@example.com',
+                        password: 'TestPassword123!'
+                    })
+                });
+                
+                const responseText = await response.text();
+                log('registerResponse', `Status: ${response.status}\nResponse: ${responseText}`);
+            } catch (error) {
+                log('registerResponse', `Error: ${error.message}`);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                log('loginResponse', 'Testing login...');
+                
+                const response = await fetch(`${API_URL}auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'TestPassword123!'
+                    })
+                });
+                
+                const responseText = await response.text();
+                log('loginResponse', `Status: ${response.status}\nResponse: ${responseText}`);
+            } catch (error) {
+                log('loginResponse', `Error: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 

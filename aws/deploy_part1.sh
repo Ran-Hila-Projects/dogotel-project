@@ -36,19 +36,23 @@ version = 0.1
 EOF
 
 ####################### BUILD & DEPLOY
+echo "🔨 Building SAM application..."
 sam build --template "${TEMPLATE_FILE}"
+echo "🚀 Deploying to AWS..."
 sam deploy --config-file samconfig.toml --no-confirm-changeset --no-fail-on-empty-changeset
 
-####################### FETCH OUTPUTS
+####################### FETCH OUTPUTS (using AWS CLI without jq)
 echo "🔍 Fetching outputs..."
-OUTPUTS=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region "${REGION}" \
-          --query "Stacks[0].Outputs" --output json)
 
-# Get outputs
-API_URL=$(echo "${OUTPUTS}" | jq -r '.[]|select(.OutputKey=="DogotelApiUrl")|.OutputValue')
-IMAGES_BUCKET=$(echo "${OUTPUTS}" | jq -r '.[]|select(.OutputKey=="ImagesBucketName")|.OutputValue')
-USER_POOL_ID=$(echo "${OUTPUTS}" | jq -r '.[]|select(.OutputKey=="CognitoUserPoolId")|.OutputValue')
-CLIENT_ID=$(echo "${OUTPUTS}" | jq -r '.[]|select(.OutputKey=="CognitoUserPoolClientId")|.OutputValue')
+# Get outputs using AWS CLI and grep/sed instead of jq
+API_URL=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region "${REGION}" \
+          --query "Stacks[0].Outputs[?OutputKey=='DogotelApiUrl'].OutputValue" --output text)
+IMAGES_BUCKET=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region "${REGION}" \
+                --query "Stacks[0].Outputs[?OutputKey=='ImagesBucketName'].OutputValue" --output text)
+USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region "${REGION}" \
+               --query "Stacks[0].Outputs[?OutputKey=='CognitoUserPoolId'].OutputValue" --output text)
+CLIENT_ID=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region "${REGION}" \
+            --query "Stacks[0].Outputs[?OutputKey=='CognitoUserPoolClientId'].OutputValue" --output text)
 
 if [[ -z "${API_URL}" ]]; then
   echo "⚠️  DogotelApiUrl output missing. Check the stack for errors."
@@ -71,25 +75,44 @@ fi
 
 ####################### GENERATE FRONTEND CONFIG
 echo "📝 Generating frontend config..."
-cat > ../dogotel-frontend/config.js <<EOF
-const CONFIG = {
-  API_URL: "${API_URL}",
-  REGION: "${REGION}",
-  S3_BUCKET_NAME: "${IMAGES_BUCKET}",
-  IMAGE_BASE_URL: "https://${IMAGES_BUCKET}.s3.amazonaws.com/images/",
-  COGNITO_USER_POOL_ID: "${USER_POOL_ID}",
-  COGNITO_USER_POOL_CLIENT_ID: "${CLIENT_ID}"
-};
 
-export default CONFIG;
-EOF
+# Calculate all config values
+WEBSITE_BUCKET="${PROJECT_NAME}-website-${ACCOUNT_ID}"
+COGNITO_HOSTED_UI_URL="https://${UNIQUE_DOMAIN}.auth.${REGION}.amazoncognito.com"
+REDIRECT_URL="http://${WEBSITE_BUCKET}.s3-website-${REGION}.amazonaws.com"
+IMAGE_BASE_URL="https://${IMAGES_BUCKET}.s3.amazonaws.com/images/"
 
-####################### SUMMARY
+# Replace placeholders in config.js with actual values
+sed -i.bak \
+  -e "s|__API_URL__|${API_URL}|g" \
+  -e "s|__COGNITO_USER_POOL_ID__|${USER_POOL_ID}|g" \
+  -e "s|__COGNITO_CLIENT_ID__|${CLIENT_ID}|g" \
+  -e "s|__S3_BUCKET_NAME__|${IMAGES_BUCKET}|g" \
+  -e "s|__IMAGE_BASE_URL__|${IMAGE_BASE_URL}|g" \
+  -e "s|__COGNITO_HOSTED_UI_URL__|${COGNITO_HOSTED_UI_URL}|g" \
+  -e "s|__REDIRECT_URL__|${REDIRECT_URL}|g" \
+  "../dogotel-frontend/src/config.js"
+
+rm -f "../dogotel-frontend/src/config.js.bak"
+
+####################### SUMMARY WITH ALL CONFIG VALUES
 echo -e "\n✅ Part 1 (Backend Deployment) complete!"
-printf "API URL:             %s\n" "${API_URL}"
-printf "Images bucket:       %s\n" "${IMAGES_BUCKET}"
-printf "Cognito UserPool:    %s\n" "${USER_POOL_ID}"
-printf "Cognito Client:      %s\n" "${CLIENT_ID}"
 echo ""
-echo "📁 Frontend config generated at: ../dogotel-frontend/config.js"
+echo "🔧 Backend Resources:"
+printf "   API URL:          %s\n" "${API_URL}"
+printf "   Images bucket:    %s\n" "${IMAGES_BUCKET}"
+printf "   Cognito UserPool: %s\n" "${USER_POOL_ID}"
+printf "   Cognito Client:   %s\n" "${CLIENT_ID}"
+echo ""
+echo "🔧 Frontend Config Values (for manual reference):"
+printf "   API_URL:                  %s\n" "${API_URL}"
+printf "   COGNITO_USER_POOL_ID:     %s\n" "${USER_POOL_ID}"
+printf "   COGNITO_CLIENT_ID:        %s\n" "${CLIENT_ID}"
+printf "   REGION:                   %s\n" "${REGION}"
+printf "   S3_BUCKET_NAME:           %s\n" "${IMAGES_BUCKET}"
+printf "   IMAGE_BASE_URL:           %s\n" "${IMAGE_BASE_URL}"
+printf "   COGNITO_HOSTED_UI_URL:    %s\n" "${COGNITO_HOSTED_UI_URL}"
+printf "   REDIRECT_URL:             %s\n" "${REDIRECT_URL}"
+echo ""
+echo "📁 Frontend config updated at: ../dogotel-frontend/src/config.js"
 echo "🚀 Ready for Part 2 (Frontend Upload)!" 

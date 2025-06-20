@@ -12,21 +12,49 @@ function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    if (!email || !password) {
+      setError("Email and password are required");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      // AWS Cognito login
+      console.log('Attempting login with:', { email });
+      
       const res = await fetch(`${CONFIG.API_URL}auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ email, password }),
       });
+      
+      console.log('Response status:', res.status);
+      
       const data = await res.json();
-      if (!res.ok || !data.access_token) {
+      console.log('Response data:', data);
+      
+      if (!res.ok || !data.success) {
         throw new Error(data.error || "Login failed");
       }
-      // Save tokens, redirect, etc.
-      localStorage.setItem("access_token", data.access_token);
+      
+      // Save tokens
+      if (data.accessToken) {
+        localStorage.setItem("access_token", data.accessToken);
+      }
+      if (data.idToken) {
+        localStorage.setItem("id_token", data.idToken);
+      }
+      if (data.refreshToken) {
+        localStorage.setItem("refresh_token", data.refreshToken);
+      }
+      
+      // Redirect to home page
       window.location.href = "/";
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message);
     } finally {
       setLoading(false);

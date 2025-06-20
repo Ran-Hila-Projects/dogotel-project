@@ -39,7 +39,11 @@
       "Properties": {
         "ClientName": { "Fn::Sub": "${ProjectName}-WebClient" },
         "UserPoolId": { "Ref": "UserPool" },
-        "GenerateSecret": false
+        "GenerateSecret": false,
+        "ExplicitAuthFlows": [
+          "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH"
+        ]
       }
     },
 
@@ -77,6 +81,52 @@
               "Resource": { "Fn::Sub": "arn:aws:s3:::${ImagesBucket}/*" }
             }
           ]
+        }
+      }
+    },
+
+    "AuthFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Auth" },
+        "Handler": "auth_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "COGNITO_USER_POOL_ID": { "Ref": "UserPool" },
+            "COGNITO_CLIENT_ID": { "Ref": "UserPoolClient" }
+          }
+        },
+        "Events": {
+          "AuthRegister": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/register",
+              "Method": "post"
+            }
+          },
+          "AuthRegisterOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/register",
+              "Method": "options"
+            }
+          },
+          "AuthLogin": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/login",
+              "Method": "post"
+            }
+          },
+          "AuthLoginOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/login",
+              "Method": "options"
+            }
+          }
         }
       }
     },
@@ -207,8 +257,6 @@
         }
       }
     },
-
-
 
     "RoomsTable": {
       "Type": "AWS::DynamoDB::Table",
