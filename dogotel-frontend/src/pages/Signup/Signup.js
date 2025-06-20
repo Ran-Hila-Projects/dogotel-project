@@ -5,7 +5,8 @@ import "./Signup.css";
 
 function Signup({ setIsLoggedIn, setUserName }) {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [birthday, setBirthday] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,7 +66,7 @@ function Signup({ setIsLoggedIn, setUserName }) {
       setError("Passwords do not match");
       return;
     }
-    if (!fullName || !birthday || !email || !password) {
+    if (!firstName || !lastName || !birthday || !email || !password) {
       setError("All fields are required");
       return;
     }
@@ -84,7 +85,8 @@ function Signup({ setIsLoggedIn, setUserName }) {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          fullName,
+          firstName,
+          lastName,
           birthday,
           email,
           password,
@@ -112,13 +114,24 @@ function Signup({ setIsLoggedIn, setUserName }) {
           Create an account to enjoy all the services we have!
         </div>
         <form className="signup-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              type="text"
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              style={{ flex: 1 }}
+            />
+            <input
+              type="text"
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              style={{ flex: 1 }}
+            />
+          </div>
           <input
             type="date"
             placeholder="Birthday"
