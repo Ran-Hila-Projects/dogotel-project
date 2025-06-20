@@ -6,15 +6,28 @@ import { useLocation, useNavigate } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import Toast from "../../components/Toast/Toast";
-import rooms from "../../data/rooms";
 import CONFIG from "../../config";
 
-// Future: fetch from AWS DynamoDB
+// Fetch rooms from backend API
 async function fetchRooms() {
-  // In the future, fetch from server
-  // const response = await fetch(CONFIG.API_URL + "api/rooms");
-  // return await response.json();
-  return Object.values(rooms);
+  try {
+    console.log('Fetching rooms from:', CONFIG.API_URL + 'rooms');
+    const response = await fetch(CONFIG.API_URL + 'rooms');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log('Fetched rooms:', data);
+    // Convert array to object for compatibility with existing code
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return Object.values(data);
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    // Return empty array as fallback
+    return [];
+  }
 }
 
 function useQuery() {
