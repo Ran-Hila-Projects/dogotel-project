@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import "./Profile.css";
 import CONFIG from "../../config";
 import Loader from "../../components/Loader/Loader";
+import avatarPlaceholder from "../../assets/images/avatar-placeholder.jpg";
 
 // Dummy user data
 const userData = {
   username: "John Doe",
   birthdate: "1990-01-01",
   email: "john.doe@example.com",
-  photo: "https://via.placeholder.com/150",
+  photo: "", // No photo initially to show placeholder
 };
 
 // Booking history state will be fetched from server
@@ -26,7 +27,9 @@ function Profile() {
   const [dogs, setDogs] = useState([]);
   const [dogForms, setDogForms] = useState([{ ...emptyDogForm }]);
   const [activeTab, setActiveTab] = useState("profile");
-  const [profilePhoto, setProfilePhoto] = useState(userData.photo);
+  const [profilePhoto, setProfilePhoto] = useState(
+    userData.photo || avatarPlaceholder
+  );
   const [profileUploading, setProfileUploading] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [bookingHistory, setBookingHistory] = useState([]);
