@@ -11,9 +11,10 @@
     },
     "Api": {
       "Cors": {
-        "AllowMethods": "'GET,POST,PUT,DELETE,OPTIONS'",
-        "AllowHeaders": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-        "AllowOrigin": "'*'"
+        "AllowMethods": "'*'",
+        "AllowHeaders": "'*'",
+        "AllowOrigin": "'*'",
+        "MaxAge": "'86400'"
       }
     }
   },
@@ -95,7 +96,8 @@
         "Environment": {
           "Variables": {
             "COGNITO_USER_POOL_ID": { "Ref": "UserPool" },
-            "COGNITO_CLIENT_ID": { "Ref": "UserPoolClient" }
+            "COGNITO_CLIENT_ID": { "Ref": "UserPoolClient" },
+            "USERS_TABLE": { "Ref": "UsersTable" }
           }
         },
         "Events": {
@@ -124,6 +126,20 @@
             "Type": "Api",
             "Properties": {
               "Path": "/auth/login",
+              "Method": "options"
+            }
+          },
+          "AuthCheckAdmin": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/check-admin",
+              "Method": "post"
+            }
+          },
+          "AuthCheckAdminOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/auth/check-admin",
               "Method": "options"
             }
           }
@@ -194,6 +210,55 @@
               "Path": "/rooms/{id}/unavailable-ranges",
               "Method": "get"
             }
+          },
+          "RoomsOptionsBase": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms",
+              "Method": "options"
+            }
+          },
+          "RoomsOptionsId": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}",
+              "Method": "options"
+            }
+          },
+          "RoomsOptionsUnavailable": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/unavailable-dates",
+              "Method": "options"
+            }
+          },
+          "RoomsOptionsRanges": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/unavailable-ranges",
+              "Method": "options"
+            }
+          },
+          "GetRoomReviews": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/reviews",
+              "Method": "get"
+            }
+          },
+          "AddRoomReview": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/reviews",
+              "Method": "post"
+            }
+          },
+          "RoomReviewsOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/rooms/{id}/reviews",
+              "Method": "options"
+            }
           }
         }
       }
@@ -227,6 +292,27 @@
               "Path": "/bookings",
               "Method": "post"
             }
+          },
+          "BookingsOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/bookings",
+              "Method": "options"
+            }
+          },
+          "GetBookingHistory": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/bookings/{email}",
+              "Method": "get"
+            }
+          },
+          "GetBookingHistoryOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/bookings/{email}",
+              "Method": "options"
+            }
           }
         }
       }
@@ -254,6 +340,13 @@
               "Path": "/admin/initialize",
               "Method": "post"
             }
+          },
+          "InitializeDataOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/admin/initialize",
+              "Method": "options"
+            }
           }
         }
       }
@@ -278,6 +371,65 @@
             "Type": "Api",
             "Properties": {
               "Path": "/api/rekognition/detect-breed",
+              "Method": "options"
+            }
+          }
+        }
+      }
+    },
+
+    "UserFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-User" },
+        "Handler": "user_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "USERS_TABLE": { "Ref": "UsersTable" }
+          }
+        },
+        "Events": {
+          "GetUserProfile": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/{email}",
+              "Method": "get"
+            }
+          },
+          "GetUserProfileOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/{email}",
+              "Method": "options"
+            }
+          },
+          "UpdateProfilePhoto": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/profile-photo",
+              "Method": "post"
+            }
+          },
+          "UpdateProfilePhotoOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/profile-photo",
+              "Method": "options"
+            }
+          },
+          "UpdateUserProfile": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/profile",
+              "Method": "put"
+            }
+          },
+          "UpdateUserProfileOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/user/profile",
               "Method": "options"
             }
           }

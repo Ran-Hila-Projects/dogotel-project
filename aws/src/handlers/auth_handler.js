@@ -1,6 +1,15 @@
-const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminInitiateAuthCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminInitiateAuthCommand, AdminListGroupsForUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
+
+// Initialize DynamoDB client
+const ddbClient = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(ddbClient);
+
+// Environment variables
+const USERS_TABLE = process.env.USERS_TABLE || 'DogotelUsers';
 
 exports.handler = async (event) => {
   // CORS headers - same pattern as example
@@ -31,6 +40,8 @@ exports.handler = async (event) => {
       return await handleRegister(event, corsHeaders);
     } else if (path === '/auth/login' && method === 'POST') {
       return await handleLogin(event, corsHeaders);
+    } else if (path === '/auth/check-admin' && method === 'POST') {
+      return await handleCheckAdmin(event, corsHeaders);
     } else {
       return {
         statusCode: 404,
@@ -60,7 +71,7 @@ exports.handler = async (event) => {
 async function handleRegister(event, corsHeaders) {
   try {
     const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const { email, password, firstName, lastName } = body;
+    const { email, password, firstName, lastName, birthday } = body;
 
     if (!email || !password || !firstName || !lastName) {
       return {
@@ -101,7 +112,26 @@ async function handleRegister(event, corsHeaders) {
 
     await cognitoClient.send(new AdminSetUserPasswordCommand(setPasswordParams));
 
-    console.log('User registered successfully');
+    // Save user data to DynamoDB
+    const userData = {
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      username: `${firstName} ${lastName}`,
+      birthdate: birthday || '', // Use birthday from signup form if provided
+      profilePhoto: '', // Empty initially, can be updated in profile
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const putParams = {
+      TableName: USERS_TABLE,
+      Item: userData
+    };
+
+    await docClient.send(new PutCommand(putParams));
+
+    console.log('User registered successfully and saved to DynamoDB');
 
     return {
       statusCode: 201,
@@ -109,7 +139,8 @@ async function handleRegister(event, corsHeaders) {
       body: JSON.stringify({
         success: true,
         message: 'User registered successfully',
-        email: email
+        email: email,
+        userData: userData
       })
     };
 
@@ -207,4 +238,85 @@ async function handleLogin(event, corsHeaders) {
       })
     };
   }
-} 
+}
+
+async function handleCheckAdmin(event, corsHeaders) {
+  try {
+    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const { email } = body;
+
+    if (!email) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Email is required'
+        })
+      };
+    }
+
+    console.log(`Checking admin status for user: ${email}`);
+
+    try {
+      // Check if user is in admin group
+      const listGroupsParams = {
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: email
+      };
+
+      const result = await cognitoClient.send(new AdminListGroupsForUserCommand(listGroupsParams));
+      const groups = result.Groups || [];
+      
+      // Check if user is in admin group
+      const isAdmin = groups.some(group => 
+        group.GroupName === 'admin' || 
+        group.GroupName === 'Admin' || 
+        group.GroupName === 'ADMIN'
+      );
+
+      console.log(`User ${email} admin status: ${isAdmin}, groups: ${groups.map(g => g.GroupName).join(', ')}`);
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          isAdmin: isAdmin,
+          groups: groups.map(g => g.GroupName)
+        })
+      };
+
+    } catch (cognitoError) {
+      console.log(`User ${email} not found in Cognito or error checking groups:`, cognitoError.message);
+      
+      // If user doesn't exist in Cognito, check if it's a hardcoded admin email
+      const adminEmails = ['admin@dogotel.com', 'admin@example.com'];
+      const isHardcodedAdmin = adminEmails.includes(email.toLowerCase());
+      
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          isAdmin: isHardcodedAdmin,
+          groups: isHardcodedAdmin ? ['admin'] : [],
+          note: isHardcodedAdmin ? 'Hardcoded admin user' : 'User not found in Cognito'
+        })
+      };
+    }
+
+  } catch (error) {
+    console.error('Admin check error:', error);
+    
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to check admin status',
+        message: error.message
+      })
+    };
+  }
+}

@@ -35,11 +35,27 @@ version = 0.1
   parameter_overrides  = "ProjectName=${PROJECT_NAME} CognitoDomainPrefix=${UNIQUE_DOMAIN}"
 EOF
 
+####################### PREPARE ROOM DATA
+echo "📊 Preparing room data for Lambda package..."
+# Generate room data with S3 URLs
+node prepare_room_data.js "$ACCOUNT_ID"
+
+# Copy room data to the handlers directory so it's included in the Lambda package
+if [ -f "room_data.json" ]; then
+    cp room_data.json src/handlers/
+    echo "✅ Room data copied to Lambda package"
+else
+    echo "⚠️ Warning: Room data file not found"
+fi
+
 ####################### BUILD & DEPLOY
 echo "🔨 Building SAM application..."
 sam build --template "${TEMPLATE_FILE}"
 echo "🚀 Deploying to AWS..."
 sam deploy --config-file samconfig.toml --no-confirm-changeset --no-fail-on-empty-changeset
+
+# Clean up temporary files
+rm -f room_data.json src/handlers/room_data.json
 
 ####################### FETCH OUTPUTS (using AWS CLI without jq)
 echo "🔍 Fetching outputs..."

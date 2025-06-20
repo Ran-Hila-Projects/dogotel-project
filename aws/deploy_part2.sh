@@ -56,36 +56,31 @@ else
     echo "⚠️ Warning: Room images directory not found at ../dogotel-frontend/src/assets/rooms-images/"
 fi
 
-echo "📊 Preparing room data for backend..."
-# Generate room data with S3 URLs
-node prepare_room_data.js "$ACCOUNT_ID"
-
-echo "🔄 Uploading room data to backend..."
+echo "🔄 Triggering backend data initialization..."
 # Get API URL from CloudFormation stack
 STACK_NAME="dogotel-stack"
 API_URL=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" \
           --query "Stacks[0].Outputs[?OutputKey=='DogotelApiUrl'].OutputValue" --output text)
 
-if [ -n "$API_URL" ] && [ -f "room_data.json" ]; then
+if [ -n "$API_URL" ]; then
     echo "🚀 Initializing backend data at: ${API_URL}admin/initialize"
     
-    # Upload room data to backend
+    # Trigger data initialization (room data will be loaded from file system)
     curl -X POST \
         -H "Content-Type: application/json" \
-        -d @room_data.json \
+        -d '{"action":"initialize"}' \
         "${API_URL}admin/initialize"
     
     if [ $? -eq 0 ]; then
-        echo "✅ Room data uploaded to backend successfully!"
+        echo "✅ Backend data initialization triggered successfully!"
     else
-        echo "⚠️ Warning: Failed to upload room data to backend"
+        echo "⚠️ Warning: Failed to trigger backend data initialization"
     fi
-    
-    # Clean up temporary file
-    rm -f room_data.json
 else
-    echo "⚠️ Warning: Could not get API URL or room data file not found"
+    echo "⚠️ Warning: Could not get API URL from CloudFormation stack"
 fi
+
+
 
 echo "📤 Uploading website files to $WEBSITE_BUCKET..."
 # Make sure we're in the right directory relative to the dogotel-frontend folder

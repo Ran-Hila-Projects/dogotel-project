@@ -90,12 +90,18 @@ async function handleDetectBreed(event) {
             const labelName = label.Name;
             const labelConfidence = label.Confidence;
             
-            // Check for exact breed matches
+            // Check for exact breed matches - be more specific to avoid false matches
             for (const breed of dogBreeds) {
-                if (labelName.toLowerCase().includes(breed.toLowerCase()) || 
-                    breed.toLowerCase().includes(labelName.toLowerCase())) {
+                const labelLower = labelName.toLowerCase();
+                const breedLower = breed.toLowerCase();
+                
+                // Check for exact matches or specific breed detection
+                if (labelLower === breedLower || 
+                    (labelLower.includes(breedLower) && breedLower.length > 3) ||
+                    (breedLower.includes(labelLower) && labelLower.length > 3 && 
+                     !['dog', 'canine', 'pet', 'animal'].includes(labelLower))) {
                     if (labelConfidence > confidence) {
-                        detectedBreed = breed;
+                        detectedBreed = labelName; // Use the actual label from Rekognition
                         confidence = labelConfidence;
                     }
                 }

@@ -39,6 +39,7 @@ function ARoom() {
   const [roomData, setRoomData] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [showReviewPopup, setShowReviewPopup] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const navigate = useNavigate();
   // TODO: Replace with real user from auth context
@@ -60,10 +61,22 @@ function ARoom() {
   // --- REAL LOGIC (parallel, not used in UI yet) ---
   const [realUserBookingsForRoom, setRealUserBookingsForRoom] = useState([]);
   const [realUserHasReviewed, setRealUserHasReviewed] = useState(false);
+  
+  // Check if user has already reviewed this room
+  useEffect(() => {
+    if (!currentUser.email || !roomData) return;
+    
+    // Check if user has already reviewed this room
+    const hasReviewed = roomData.reviews.some(review => 
+      review.email === currentUser.email || review.name === currentUser.name
+    );
+    setRealUserHasReviewed(hasReviewed);
+  }, [currentUser.email, roomData]);
+
   useEffect(() => {
     if (!currentUser.email || !roomId) return;
     // Fetch real user bookings for this room
-    fetch(CONFIG.API_URL + `api/bookings/${currentUser.email}`)
+    fetch(CONFIG.API_URL + `bookings/${currentUser.email}`)
       .then((res) => res.json())
       .then((history) => {
         if (Array.isArray(history)) {
@@ -75,27 +88,20 @@ function ARoom() {
         // Optionally handle error
         setRealUserBookingsForRoom([]);
       });
-    // Optionally, fetch real reviews for this room and user
-    // fetch(CONFIG.API_URL + `api/rooms/${roomId}/reviews`).then(...)
-    // setRealUserHasReviewed(...)
   }, [currentUser.email, roomId]);
 
   // --- ENABLE REVIEW BUTTON LOGIC ---
-  // TODO: Replace dummy logic with real logic below
   const canAddReview =
     (userBookingsForRoom.length > 0 || realUserBookingsForRoom.length > 0) &&
     !userHasReviewed &&
     !realUserHasReviewed;
 
   const handleReviewSubmit = async ({ stars, text }) => {
-    // DUMMY: In real app, POST to server
-    alert(`Review submitted: ${stars} stars, text: ${text}`);
-    setShowReviewPopup(false);
-    // Optionally, refresh reviews
-
-    // --- REAL LOGIC (not used in UI yet) ---
+    setSubmittingReview(true);
+    
     try {
-      const res = await fetch(CONFIG.API_URL + `api/rooms/${roomId}/reviews`, {
+      // Submit review to server
+      const res = await fetch(CONFIG.API_URL + `rooms/${roomId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,12 +110,30 @@ function ARoom() {
           text,
         }),
       });
-      if (!res.ok) throw new Error("Failed to submit review");
-      // Optionally handle success
-      // Optionally refresh reviews
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to submit review");
+      }
+
+      const result = await res.json();
+      console.log("Review submitted successfully:", result);
+      
+      // Close the popup
+      setShowReviewPopup(false);
+      
+      // Refresh room data to show the new review
+      const updatedRoomData = await fetchRoomDataAsync(roomId);
+      setRoomData(updatedRoomData);
+      
+      // Show success message
+      alert(`✅ Review submitted successfully! ${stars} stars`);
+      
     } catch (err) {
-      // Optionally show error in UI
       console.error("Error submitting review:", err);
+      alert(`❌ Failed to submit review: ${err.message}`);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -206,9 +230,20 @@ function ARoom() {
               className="add-review-btn"
               onClick={() => setShowReviewPopup(true)}
               style={{ marginBottom: 16 }}
+              disabled={submittingReview}
             >
-              Add a review
+              {submittingReview ? "Submitting..." : "Add a review"}
             </button>
+          )}
+          {!canAddReview && (userBookingsForRoom.length === 0 && realUserBookingsForRoom.length === 0) && (
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '16px' }}>
+              📝 You need to book this room before you can write a review
+            </p>
+          )}
+          {!canAddReview && (userHasReviewed || realUserHasReviewed) && (
+            <p style={{ color: '#27ae60', fontSize: '14px', marginBottom: '16px' }}>
+              ✅ You have already reviewed this room
+            </p>
           )}
         </div>
         <div className="reviews-list">
@@ -223,8 +258,9 @@ function ARoom() {
         </div>
         <ReviewWritingPopup
           open={showReviewPopup}
-          onClose={() => setShowReviewPopup(false)}
+          onClose={() => !submittingReview && setShowReviewPopup(false)}
           onSubmit={handleReviewSubmit}
+          disabled={submittingReview}
         />
       </section>
       <Footer />

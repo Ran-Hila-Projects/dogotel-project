@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 const { v4: uuidv4 } = require('uuid');
 const { corsResponse, corsErrorResponse, handlePreflightRequest, extractOriginFromEvent, isAdmin } = require('./cors_utils');
@@ -38,6 +38,10 @@ exports.handler = async (event, context) => {
             } else {
                 return await handleGetAllBookings(event);
             }
+        } else if (path.startsWith('/bookings/') && httpMethod === 'GET') {
+            // Handle GET /bookings/:email for booking history
+            const email = path.split('/bookings/')[1];
+            return await handleGetBookingHistory(event, email);
         } else {
             return corsErrorResponse(404, 'Endpoint not found', origin);
         }
@@ -197,28 +201,107 @@ async function handleGetAllBookings(event) {
             return corsErrorResponse(403, 'Admin access required', origin);
         }
 
-        const result = await docClient.send(new QueryCommand({
+        const result = await docClient.send(new ScanCommand({
             TableName: BOOKINGS_TABLE
         }));
 
         const bookings = result.Items || [];
 
         // Transform for admin view
-        const transformedBookings = bookings.map(booking => ({
-            bookingId: booking.bookingId,
-            userEmail: booking.userEmail,
-            room: booking.room,
-            dining: booking.dining,
-            services: booking.services,
-            totalPrice: booking.totalPrice,
-            status: booking.status,
-            createdAt: booking.createdAt,
-            updatedAt: booking.updatedAt
-        }));
+        const transformedBookings = bookings.map(booking => {
+            const room = booking.room || {};
+            const dining = booking.dining || {};
+            const services = booking.services || [];
+            
+            return {
+                bookingId: booking.bookingId,
+                user: booking.userEmail,
+                room: room.roomTitle || room.title || 'Unknown Room',
+                dogs: Array.isArray(room.dogs) 
+                    ? room.dogs.map(dog => typeof dog === 'string' ? dog : dog.name).join(', ')
+                    : 'N/A',
+                startDate: room.startDate || 'N/A',
+                endDate: room.endDate || 'N/A',
+                totalPrice: booking.totalPrice || 0,
+                status: booking.status || 'unknown',
+                createdAt: booking.createdAt,
+                updatedAt: booking.updatedAt,
+                dining: dining.title || 'None',
+                services: Array.isArray(services) 
+                    ? services.map(service => service.title || service.name || service).join(', ') || 'None'
+                    : 'None'
+            };
+        });
 
-        return corsResponse(200, transformedBookings, origin);
+        // Sort by creation date (newest first)
+        transformedBookings.sort((a, b) => 
+            new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+
+        return corsResponse(200, {
+            success: true,
+            bookings: transformedBookings
+        }, origin);
     } catch (error) {
         console.error('Get all bookings error:', error);
+        return corsErrorResponse(500, 'Internal server error', extractOriginFromEvent(event));
+    }
+}
+
+async function handleGetBookingHistory(event, userEmail) {
+    try {
+        const origin = extractOriginFromEvent(event);
+
+        if (!userEmail) {
+            return corsErrorResponse(400, 'User email is required', origin);
+        }
+
+        // Query bookings by userEmail using GSI
+        const result = await docClient.send(new QueryCommand({
+            TableName: BOOKINGS_TABLE,
+            IndexName: 'UserBookingsIndex',
+            KeyConditionExpression: 'userEmail = :userEmail',
+            ExpressionAttributeValues: { ':userEmail': userEmail },
+            ScanIndexForward: false // Most recent first
+        }));
+
+        const bookings = result.Items || [];
+
+        if (bookings.length === 0) {
+            return corsResponse(200, {
+                success: false,
+                error: 'No bookings found for this user'
+            }, origin);
+        }
+
+        // Transform to exact format from Ran_dev.txt endpoint 15
+        const history = bookings.map(booking => {
+            const room = booking.room || {};
+            const dining = booking.dining || {};
+            const services = booking.services || [];
+            
+            return {
+                bookingNumber: booking.bookingId || 'N/A',
+                dates: room.startDate && room.endDate 
+                    ? `${room.startDate} to ${room.endDate}` 
+                    : 'N/A',
+                dogs: Array.isArray(room.dogs) 
+                    ? room.dogs.map(dog => dog.name || dog) 
+                    : ['N/A'],
+                diningSelection: dining.title || 'None',
+                servicesSelection: Array.isArray(services) 
+                    ? services.map(service => service.title || service.name || service).join(', ') || 'None'
+                    : 'None',
+                totalPrice: booking.totalPrice || 0
+            };
+        });
+
+        return corsResponse(200, {
+            success: true,
+            history: history
+        }, origin);
+    } catch (error) {
+        console.error('Get booking history error:', error);
         return corsErrorResponse(500, 'Internal server error', extractOriginFromEvent(event));
     }
 }

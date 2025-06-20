@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dogotel CORS Test Suite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 30px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .warning { border-left: 4px solid #ffc107; }
+        .config-section {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐕 Dogotel CORS Test Suite</h1>
+        <p>Comprehensive test for all API endpoints with CORS verification</p>
+        
+        <div class="config-section">
+            <h3>API Configuration</h3>
+            <label>API Base URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://your-api-gateway-id.execute-api.us-east-1.amazonaws.com/Prod/">
+            <button onclick="detectApiUrl()">Auto-Detect from Error</button>
+            <button onclick="testAll()">🚀 Test All Endpoints</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>1. CORS Preflight Tests</h2>
+            <p>Testing OPTIONS requests for CORS preflight</p>
+            <button onclick="testCORSPreflight()">Test CORS Preflight</button>
+            <div id="corsResponse" class="response"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>2. Rooms API Tests</h2>
+            <button onclick="testRooms()">GET /rooms</button>
+            <button onclick="testRoom()">GET /rooms/1</button>
+            <button onclick="testRoomUnavailable()">GET /rooms/1/unavailable-dates</button>
+            <div id="roomsResponse" class="response"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>3. User Profile Tests</h2>
+            <button onclick="testUserProfile()">GET /user/john.doe@example.com</button>
+            <div id="userResponse" class="response"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>4. Booking History Tests</h2>
+            <button onclick="testBookingHistory()">GET /bookings/john.doe@example.com</button>
+            <div id="bookingResponse" class="response"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>5. Rekognition Tests</h2>
+            <button onclick="testRekognition()">POST /api/rekognition/detect-breed</button>
+            <div id="rekognitionResponse" class="response"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h2>6. Initialize Data Tests</h2>
+            <button onclick="testInitialize()">POST /admin/initialize</button>
+            <div id="initResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        function getApiUrl() {
+            return document.getElementById('apiUrl').value || 'https://your-api-gateway-id.execute-api.us-east-1.amazonaws.com/Prod/';
+        }
+
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.textContent = `[${timestamp}] ${message}\n` + element.textContent;
+        }
+
+        function detectApiUrl() {
+            // Try to make a request and extract the actual URL from error
+            fetch('https://test.execute-api.us-east-1.amazonaws.com/Prod/rooms', {
+                method: 'OPTIONS'
+            }).then(response => {
+                log('corsResponse', 'Check your AWS API Gateway URL in the console or CloudFormation outputs');
+            }).catch(error => {
+                log('corsResponse', 'Enter your API Gateway URL manually from AWS console');
+            });
+        }
+
+        async function testCORSPreflight() {
+            const baseUrl = getApiUrl();
+            const endpoints = [
+                'rooms',
+                'rooms/1', 
+                'user/john.doe@example.com',
+                'bookings/john.doe@example.com',
+                'api/rekognition/detect-breed',
+                'admin/initialize'
+            ];
+
+            log('corsResponse', 'Testing CORS preflight for all endpoints...\n');
+
+            for (const endpoint of endpoints) {
+                try {
+                    log('corsResponse', `Testing OPTIONS ${endpoint}...`);
+                    
+                    const response = await fetch(baseUrl + endpoint, {
+                        method: 'OPTIONS',
+                        headers: {
+                            'Origin': 'http://localhost:3000',
+                            'Access-Control-Request-Method': 'GET',
+                            'Access-Control-Request-Headers': 'Content-Type, Authorization'
+                        }
+                    });
+
+                    const headers = {};
+                    for (let [key, value] of response.headers.entries()) {
+                        headers[key] = value;
+                    }
+
+                    log('corsResponse', 
+                        `✅ ${endpoint}: ${response.status}\n` +
+                        `   CORS Headers: ${JSON.stringify(headers, null, 2)}\n`
+                    );
+                } catch (error) {
+                    log('corsResponse', `❌ ${endpoint}: ${error.message}\n`);
+                }
+            }
+        }
+
+        async function testRooms() {
+            const baseUrl = getApiUrl();
+            try {
+                log('roomsResponse', 'Testing GET /rooms...');
+                
+                const response = await fetch(baseUrl + 'rooms', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': 'http://localhost:3000'
+                    }
+                });
+
+                const data = await response.text();
+                const headers = {};
+                for (let [key, value] of response.headers.entries()) {
+                    headers[key] = value;
+                }
+
+                log('roomsResponse', 
+                    `Status: ${response.status}\n` +
+                    `Headers: ${JSON.stringify(headers, null, 2)}\n` +
+                    `Response: ${data.substring(0, 500)}${data.length > 500 ? '...' : ''}`
+                );
+            } catch (error) {
+                log('roomsResponse', `Error: ${error.message}`);
+            }
+        }
+
+        async function testRoom() {
+            const baseUrl = getApiUrl();
+            try {
+                log('roomsResponse', 'Testing GET /rooms/1...');
+                
+                const response = await fetch(baseUrl + 'rooms/1', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                log('roomsResponse', `Single Room Response: ${response.status}\n${data.substring(0, 300)}`);
+            } catch (error) {
+                log('roomsResponse', `Room Error: ${error.message}`);
+            }
+        }
+
+        async function testRoomUnavailable() {
+            const baseUrl = getApiUrl();
+            try {
+                log('roomsResponse', 'Testing GET /rooms/1/unavailable-dates...');
+                
+                const response = await fetch(baseUrl + 'rooms/1/unavailable-dates', {
+                    method: 'GET'
+                });
+
+                const data = await response.text();
+                log('roomsResponse', `Unavailable Dates: ${response.status}\n${data}`);
+            } catch (error) {
+                log('roomsResponse', `Unavailable Dates Error: ${error.message}`);
+            }
+        }
+
+        async function testUserProfile() {
+            const baseUrl = getApiUrl();
+            try {
+                log('userResponse', 'Testing GET /user/john.doe@example.com...');
+                
+                const response = await fetch(baseUrl + 'user/john.doe@example.com', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                log('userResponse', `User Profile: ${response.status}\n${data}`);
+            } catch (error) {
+                log('userResponse', `User Profile Error: ${error.message}`);
+            }
+        }
+
+        async function testBookingHistory() {
+            const baseUrl = getApiUrl();
+            try {
+                log('bookingResponse', 'Testing GET /bookings/john.doe@example.com...');
+                
+                const response = await fetch(baseUrl + 'bookings/john.doe@example.com', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                log('bookingResponse', `Booking History: ${response.status}\n${data}`);
+            } catch (error) {
+                log('bookingResponse', `Booking History Error: ${error.message}`);
+            }
+        }
+
+        async function testRekognition() {
+            const baseUrl = getApiUrl();
+            try {
+                log('rekognitionResponse', 'Testing POST /api/rekognition/detect-breed...');
+                
+                // Simple test image (1x1 pixel PNG in base64)
+                const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+                
+                const response = await fetch(baseUrl + 'api/rekognition/detect-breed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image: testImage
+                    })
+                });
+
+                const data = await response.text();
+                log('rekognitionResponse', `Rekognition: ${response.status}\n${data}`);
+            } catch (error) {
+                log('rekognitionResponse', `Rekognition Error: ${error.message}`);
+            }
+        }
+
+        async function testInitialize() {
+            const baseUrl = getApiUrl();
+            try {
+                log('initResponse', 'Testing POST /admin/initialize...');
+                
+                const response = await fetch(baseUrl + 'admin/initialize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                log('initResponse', `Initialize: ${response.status}\n${data}`);
+            } catch (error) {
+                log('initResponse', `Initialize Error: ${error.message}`);
+            }
+        }
+
+        async function testAll() {
+            log('corsResponse', '🚀 Starting comprehensive test suite...\n');
+            
+            await testCORSPreflight();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testRooms();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testRoom();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testRoomUnavailable();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testUserProfile();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testBookingHistory();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testRekognition();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testInitialize();
+            
+            log('corsResponse', '✅ All tests completed!');
+        }
+
+        // Auto-detect localhost dev server
+        window.addEventListener('load', function() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                log('corsResponse', '📍 Detected localhost development environment');
+            }
+        });
+    </script>
+</body>
+</html> 

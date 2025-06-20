@@ -59,6 +59,13 @@ function Login({ setIsLoggedIn, setUserName }) {
         localStorage.setItem("refresh_token", data.refreshToken);
       // Save userName/email for nav initials
       localStorage.setItem("userName", data.userName || email);
+      
+      // Store current user info for profile access
+      localStorage.setItem("currentUser", JSON.stringify({
+        email: email,
+        userName: data.userName || email
+      }));
+      
       setIsLoggedIn(true);
       setUserName(data.userName || email);
       // Redirect to home page

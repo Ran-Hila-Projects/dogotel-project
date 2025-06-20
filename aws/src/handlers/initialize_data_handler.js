@@ -51,10 +51,15 @@ async function handleInitializeData(event) {
 
         const results = {};
 
-        // Create admin group in Cognito
+        // Create admin group in Cognito first
+        console.log('Creating admin group...');
         results.adminGroup = await createAdminGroup();
+        
+        // Wait a bit to ensure group is created
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Create admin user
+        // Create admin user and add to group
+        console.log('Creating admin user...');
         results.adminUser = await createAdminUser();
 
         // Create sample rooms if provided
@@ -82,101 +87,135 @@ async function handleInitializeData(event) {
 }
 
 async function createSampleRooms() {
-    // Generate the S3 image base URL
-    const imageBaseUrl = IMAGES_BUCKET ? `https://${IMAGES_BUCKET}.s3.amazonaws.com/images/rooms/` : '';
-    
-    const sampleRooms = [
-        {
-            room_id: '1',
-            title: 'The Cozy Kennel',
-            subtitle: 'Perfect for Solo Nappers 💤',
-            description: 'A comfortable and intimate space designed for your dog\'s relaxation and peace. Features premium bedding, climate control, and daily housekeeping.',
-            dogsAmount: 1,
-            price: 55,
-            size: '30m²',
-            image: `${imageBaseUrl}room-1.jpg`,
-            included: ['Daily housekeeping', 'Premium bedding', 'Climate control', 'Feeding service'],
-            reviews: [
-                { name: 'Hila', stars: 5, review: 'Perfect for my small dog! Very clean and comfortable.' },
-                { name: 'David', stars: 4, review: 'Great service, my dog loved it here.' }
-            ],
-            is_available: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        },
-        {
-            room_id: '2',
-            title: 'Luxury Palace Suite',
-            subtitle: 'Royal Treatment Awaits 👑',
-            description: 'Our premium luxury suite with spacious accommodations, premium amenities, and personalized care for your special pet.',
-            dogsAmount: 1,
-            price: 85,
-            size: '50m²',
-            image: `${imageBaseUrl}room-2.png`,
-            included: ['Private outdoor run', 'Premium bedding', 'Personalized care', 'Gourmet treats', 'Grooming service'],
-            reviews: [
-                { name: 'Sarah', stars: 5, review: 'Absolutely amazing! My dog was treated like royalty.' },
-                { name: 'Mike', stars: 5, review: 'Worth every penny. Top-notch service.' }
-            ],
-            is_available: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        },
-        {
-            room_id: '3',
-            title: 'Economy Comfort Den',
-            subtitle: 'Budget-Friendly Comfort 🏠',
-            description: 'An affordable option that doesn\'t compromise on care. Perfect for budget-conscious pet parents.',
-            dogsAmount: 3,
-            price: 25,
-            size: '25m²',
-            image: `${imageBaseUrl}room-3.png`,
-            included: ['Shared play area', 'Basic bedding', 'Daily walks'],
-            reviews: [
-                { name: 'Lisa', stars: 4, review: 'Great value for money. My dogs were happy.' },
-                { name: 'Tom', stars: 4, review: 'Clean and safe, good for multiple dogs.' }
-            ],
-            is_available: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        },
-        {
-            room_id: '4',
-            title: 'The Presidential Paw Suite',
-            subtitle: 'Ultimate Luxury Experience ⭐',
-            description: 'The ultimate in luxury pet boarding. Spacious suite with private garden access and 24/7 personalized attention.',
-            dogsAmount: 1,
-            price: 120,
-            size: '80m²',
-            image: `${imageBaseUrl}room-4.png`,
-            included: ['Private garden', 'Premium bedding', '24/7 care', 'Gourmet meals', 'Spa services', 'Live webcam'],
-            reviews: [
-                { name: 'Emma', stars: 5, review: 'The best boarding experience ever! Highly recommend.' },
-                { name: 'John', stars: 5, review: 'My dog came back more relaxed than when he left!' }
-            ],
-            is_available: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        },
-        {
-            room_id: '5',
-            title: 'Family Pack Lodge',
-            subtitle: 'Perfect for Pack Adventures 🐕‍🦺',
-            description: 'Perfect for families with multiple dogs. Spacious room designed for comfort and socialization.',
-            dogsAmount: 4,
-            price: 55,
-            size: '60m²',
-            image: `${imageBaseUrl}room-5.png`,
-            included: ['Large play area', 'Multiple beds', 'Group activities', 'Extended playtime'],
-            reviews: [
-                { name: 'Anna', stars: 5, review: 'Perfect for my three dogs! They loved playing together.' },
-                { name: 'Robert', stars: 4, review: 'Great space for multiple pets. Well organized.' }
-            ],
-            is_available: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+    // Try to load room data from prepared file, fallback to default if not available
+    let sampleRooms;
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const roomDataPath = path.join(__dirname, 'room_data.json');
+        
+        if (fs.existsSync(roomDataPath)) {
+            const roomDataFile = JSON.parse(fs.readFileSync(roomDataPath, 'utf8'));
+            sampleRooms = roomDataFile.rooms.map(room => ({
+                room_id: room.id,
+                title: room.title,
+                subtitle: room.subtitle,
+                description: room.description,
+                dogsAmount: room.dogsAmount,
+                price: room.price,
+                size: room.size,
+                image: room.image,
+                included: room.included,
+                reviews: room.reviews,
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }));
+            console.log('✅ Using prepared room data from room_data.json');
+        } else {
+            console.log('⚠️ room_data.json not found, using fallback data');
+            throw new Error('Room data file not found');
         }
-    ];
+    } catch (error) {
+        console.log('⚠️ Could not load prepared room data, using fallback:', error.message);
+        
+        // Fallback to default room data
+        const imageBaseUrl = IMAGES_BUCKET ? `https://${IMAGES_BUCKET}.s3.amazonaws.com/images/rooms/` : '';
+        
+        sampleRooms = [
+            {
+                room_id: '1',
+                title: 'The Cozy Kennel',
+                subtitle: 'Perfect for Solo Nappers 💤',
+                description: 'A quiet, comfy room perfect for solo travelers. Includes a cozy bed, chew toys, and a snuggly blanket. Tail-wagging guaranteed.',
+                dogsAmount: 1,
+                price: 55,
+                size: '30m²',
+                image: `${imageBaseUrl}room-1.jpg`,
+                included: ['Daily housekeeping (we pick up the poop 💩', 'Soft orthopedic bed', 'Water & food bowls (refilled daily!)', 'Chew toys & squeaky duck for late-night conversations', 'Fresh air window view', 'Private potty area'],
+                reviews: [
+                    { name: 'Hila Tsivion', stars: 5, review: 'Amazing experience! My dog loved it!' },
+                    { name: 'Ran Meshulam', stars: 4, review: 'Great care, cozy room. Would book again!' },
+                    { name: 'Adi Cohen', stars: 5, review: 'They treated my pup like royalty.' }
+                ],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                room_id: '2',
+                title: 'Deluxe Duo Den',
+                subtitle: 'For Active Explorers 🐕‍🦺',
+                description: 'Spacious and luxurious suite for two dogs. Great for siblings or best friends. Comes with two beds and extra treats.',
+                dogsAmount: 2,
+                price: 80,
+                size: '50m²',
+                image: `${imageBaseUrl}room-2.png`,
+                included: ['Private play area', 'Water fountain for hydration', 'Daily playtime with staff', 'Sunlit windows', 'Memory foam beds'],
+                reviews: [
+                    { name: 'Maya Levi', stars: 5, review: 'My dog loved the play area!' },
+                    { name: 'Nadav Ben Ami', stars: 5, review: 'Perfect for active dogs, lots of space.' }
+                ],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                room_id: '3',
+                title: 'Garden Sniff Suite',
+                subtitle: 'For Curious Noses 🌿',
+                description: 'A sunny room with direct access to our sniff-friendly garden. Ideal for active pups who love fresh grass and fresh air.',
+                dogsAmount: 1,
+                price: 65,
+                size: '35m²',
+                image: `${imageBaseUrl}room-3.png`,
+                included: ['Fresh air window view', 'Private potty area', 'Access to garden sniff zone', 'Chew toys & squeaky duck for late-night conversations', 'Water & food bowls (refilled daily!)', 'Daily housekeeping (we pick up the poop 💩'],
+                reviews: [
+                    { name: 'Lior Peleg', stars: 5, review: 'Our pup had the best time sniffing around the garden. Loved it!' },
+                    { name: 'Dana Sela', stars: 4, review: 'Great room for active dogs. Beautiful sun all day.' }
+                ],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                room_id: '4',
+                title: 'Spa Paws Retreat',
+                subtitle: 'For Pampered Pooches 💆‍♂️',
+                description: 'A calm, luxury suite for pampered pups. Includes spa-scented bedding and daily relaxation music.',
+                dogsAmount: 1,
+                price: 90,
+                size: '40m²',
+                image: `${imageBaseUrl}room-4.png`,
+                included: ['Soft orthopedic bed', 'Blanket-snuggle service on request', 'Daily relaxation music', 'Spa-scented bedding', 'Private potty area', 'Water & food bowls (refilled daily!)'],
+                reviews: [
+                    { name: 'Tamar Avrahami', stars: 5, review: 'My dog came back more relaxed than I am after a spa day 😂' },
+                    { name: 'Noam Geffen', stars: 5, review: 'They really know how to pamper pets here!' }
+                ],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                room_id: '5',
+                title: 'Family Fur Cabin',
+                subtitle: 'Perfect for Pupper Parties 🐾🎉',
+                description: 'Perfect for 3 furry siblings – or a party! A wide room with space to run, jump and nap together.',
+                dogsAmount: 3,
+                price: 100,
+                size: '60m²',
+                image: `${imageBaseUrl}room-5.png`,
+                included: ['Three soft orthopedic beds', 'Large private play area', 'Daily housekeeping (we pick up the poop 💩', 'Water & food bowls (refilled daily!)', 'Chew toys & squeaky duck for late-night conversations', 'Fresh air window view'],
+                reviews: [
+                    { name: 'Yael Bar-On', stars: 5, review: 'Perfect for our 3 crazy pups! They had so much room to play.' },
+                    { name: 'Amit Tal', stars: 4, review: 'Spacious and fun. Our dogs came home tired and happy!' }
+                ],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        ];
+    }
 
     let successCount = 0;
     for (const room of sampleRooms) {
@@ -235,7 +274,7 @@ async function createRoomsFromData(roomsData) {
 
 async function createAdminGroup() {
     try {
-        const groupName = 'Admins';
+        const groupName = 'admin';
         const groupDescription = 'Dogotel Administrators Group';
 
         // Create admin group in Cognito
@@ -268,7 +307,7 @@ async function createAdminUser() {
         const adminEmail = 'admin@dogotel.com';
         const tempPassword = 'TempPass123!';
         const permanentPassword = 'AdminPass123!';
-        const adminGroupName = 'Admins';
+        const adminGroupName = 'admin';
 
         // Create user in Cognito
         try {

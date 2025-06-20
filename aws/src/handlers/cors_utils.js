@@ -1,19 +1,38 @@
 // CORS utility functions for Node.js Lambda handlers
+// Optimized for AWS Learner Lab - Maximum permissivity for POC
 
 function extractOriginFromEvent(event) {
     const headers = event.headers || {};
-    return headers.origin || headers.Origin || '*';
+    // Be more lenient with origin detection for learner lab
+    return headers.origin || headers.Origin || headers.referer || headers.Referer || '*';
 }
 
 function corsResponse(statusCode, body, origin = '*') {
+    const headers = {
+        'Content-Type': 'application/json',
+        // Always allow all origins for learner lab
+        'Access-Control-Allow-Origin': '*',
+        // Allow all headers - maximum permissivity
+        'Access-Control-Allow-Headers': '*',
+        // Allow all methods
+        'Access-Control-Allow-Methods': '*',
+        // Expose all headers
+        'Access-Control-Expose-Headers': '*',
+        // Cache preflight for 24 hours
+        'Access-Control-Max-Age': '86400',
+        // Additional headers for compatibility
+        'Vary': 'Origin',
+        'Cache-Control': 'no-cache'
+    };
+
+    // Only add credentials if origin is not wildcard
+    if (origin !== '*') {
+        headers['Access-Control-Allow-Credentials'] = 'true';
+    }
+
     return {
         statusCode,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
+        headers,
         body: JSON.stringify(body)
     };
 }
@@ -23,14 +42,30 @@ function corsErrorResponse(statusCode, message, origin = '*') {
 }
 
 function handlePreflightRequest(event, origin = '*') {
+    const headers = {
+        // Always allow all origins for learner lab
+        'Access-Control-Allow-Origin': '*',
+        // Allow all headers - maximum permissivity
+        'Access-Control-Allow-Headers': '*',
+        // Allow all methods
+        'Access-Control-Allow-Methods': '*',
+        // Expose all headers
+        'Access-Control-Expose-Headers': '*',
+        // Cache preflight for 24 hours
+        'Access-Control-Max-Age': '86400',
+        // Additional headers for compatibility
+        'Vary': 'Origin',
+        'Cache-Control': 'no-cache'
+    };
+
+    // Only add credentials if origin is not wildcard
+    if (origin !== '*') {
+        headers['Access-Control-Allow-Credentials'] = 'true';
+    }
+
     return {
         statusCode: 200,
-        headers: {
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-            'Access-Control-Max-Age': '86400'
-        },
+        headers,
         body: ''
     };
 }

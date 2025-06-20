@@ -40,6 +40,12 @@ exports.handler = async (event, context) => {
         } else if (path.startsWith('/rooms/') && path.endsWith('/unavailable-ranges') && httpMethod === 'GET') {
             const roomId = path.split('/')[2];
             return await handleGetUnavailableRanges(roomId, event);
+        } else if (path.startsWith('/rooms/') && path.endsWith('/reviews') && httpMethod === 'POST') {
+            const roomId = path.split('/')[2];
+            return await handleAddReview(roomId, event);
+        } else if (path.startsWith('/rooms/') && path.endsWith('/reviews') && httpMethod === 'GET') {
+            const roomId = path.split('/')[2];
+            return await handleGetReviews(roomId, event);
         } else if (path === '/rooms' && httpMethod === 'POST') {
             return await handleCreateRoom(event);
         } else if (path.startsWith('/rooms/') && path.split('/').length === 3 && httpMethod === 'PUT') {
@@ -394,4 +400,106 @@ function transformRoomForFrontend(room) {
         reviews: room.reviews || [],
         isAvailable: room.is_available !== false
     };
-} 
+}
+
+async function handleAddReview(roomId, event) {
+    try {
+        const origin = extractOriginFromEvent(event);
+        const body = JSON.parse(event.body);
+        const { email, stars, text } = body;
+
+        if (!email || !stars || !text) {
+            return corsErrorResponse(400, 'Missing required fields: email, stars, text', origin);
+        }
+
+        if (stars < 1 || stars > 5) {
+            return corsErrorResponse(400, 'Stars must be between 1 and 5', origin);
+        }
+
+        // Check if room exists
+        const roomResult = await docClient.send(new GetCommand({
+            TableName: ROOMS_TABLE,
+            Key: { room_id: roomId }
+        }));
+
+        if (!roomResult.Item) {
+            return corsErrorResponse(404, 'Room not found', origin);
+        }
+
+        // Create new review
+        const newReview = {
+            name: email.split('@')[0], // Use email prefix as name
+            email: email,
+            stars: parseInt(stars),
+            review: text,
+            date: new Date().toISOString(),
+            reviewId: uuidv4()
+        };
+
+        // Get current reviews and add new one
+        const currentReviews = roomResult.Item.reviews || [];
+        
+        // Check if user already reviewed this room
+        const existingReviewIndex = currentReviews.findIndex(r => r.email === email);
+        if (existingReviewIndex !== -1) {
+            // Update existing review
+            currentReviews[existingReviewIndex] = newReview;
+        } else {
+            // Add new review
+            currentReviews.push(newReview);
+        }
+
+        // Update room with new reviews
+        await docClient.send(new UpdateCommand({
+            TableName: ROOMS_TABLE,
+            Key: { room_id: roomId },
+            UpdateExpression: 'SET reviews = :reviews, updatedAt = :updatedAt',
+            ExpressionAttributeValues: {
+                ':reviews': currentReviews,
+                ':updatedAt': new Date().toISOString()
+            }
+        }));
+
+        return corsResponse(201, {
+            success: true,
+            message: existingReviewIndex !== -1 ? 'Review updated successfully' : 'Review added successfully',
+            review: newReview
+        }, origin);
+
+    } catch (error) {
+        console.error('Add review error:', error);
+        return corsErrorResponse(500, 'Internal server error', extractOriginFromEvent(event));
+    }
+}
+
+async function handleGetReviews(roomId, event) {
+    try {
+        const origin = extractOriginFromEvent(event);
+
+        // Get room with reviews
+        const result = await docClient.send(new GetCommand({
+            TableName: ROOMS_TABLE,
+            Key: { room_id: roomId }
+        }));
+
+        if (!result.Item) {
+            return corsErrorResponse(404, 'Room not found', origin);
+        }
+
+        const reviews = result.Item.reviews || [];
+
+        return corsResponse(200, {
+            success: true,
+            roomId: roomId,
+            reviews: reviews,
+            reviewCount: reviews.length,
+            averageRating: reviews.length > 0 
+                ? (reviews.reduce((sum, r) => sum + r.stars, 0) / reviews.length).toFixed(1)
+                : 0
+        }, origin);
+
+    } catch (error) {
+        console.error('Get reviews error:', error);
+        return corsErrorResponse(500, 'Internal server error', extractOriginFromEvent(event));
+    }
+}

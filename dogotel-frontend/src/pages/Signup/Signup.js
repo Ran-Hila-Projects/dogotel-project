@@ -44,6 +44,13 @@ function Signup({ setIsLoggedIn, setUserName }) {
         if (loginData.refreshToken)
           localStorage.setItem("refresh_token", loginData.refreshToken);
         localStorage.setItem("userName", loginData.userName || email);
+        
+        // Store current user info for profile access
+        localStorage.setItem("currentUser", JSON.stringify({
+          email: email,
+          userName: loginData.userName || email
+        }));
+        
         setIsLoggedIn(true);
         setUserName(loginData.userName || email);
         // Redirect to home page
