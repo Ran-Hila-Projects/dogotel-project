@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Profile.css";
 import CONFIG from "../../config";
+import Loader from "../../components/Loader/Loader";
 
 // Dummy user data
 const userData = {
@@ -31,6 +32,7 @@ function Profile() {
   const [bookingHistory, setBookingHistory] = useState([]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // Fetch booking history from server on mount
   useEffect(() => {
@@ -53,6 +55,7 @@ function Profile() {
         setBookingHistory([]);
       } finally {
         setBookingLoading(false);
+        setProfileLoading(false);
       }
     }
     fetchBookingHistory();
@@ -178,6 +181,10 @@ function Profile() {
   const handleAddAnotherDog = () => {
     setDogForms((forms) => [...forms, { ...emptyDogForm }]);
   };
+
+  if (profileLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="profile-page">

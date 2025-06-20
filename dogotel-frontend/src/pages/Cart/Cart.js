@@ -3,6 +3,7 @@ import "./Cart.css";
 import Toast from "../../components/Toast/Toast";
 import ReactConfetti from "react-confetti";
 import CONFIG from "../../config";
+import Loader from "../../components/Loader/Loader";
 
 function BookingSuccessModal({ open, dogNames, onClose }) {
   if (!open) return null;
@@ -93,6 +94,24 @@ function Cart() {
 
   return (
     <div className="cart-page">
+      {bookingLoading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(255,255,255,0.7)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Loader />
+        </div>
+      )}
       <h1>Your Booking Cart</h1>
       <div className="cart-section">
         <h2>Room</h2>

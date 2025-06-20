@@ -47,12 +47,15 @@ function Rooms() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [toastOpen, setToastOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Fetch rooms on mount or when cleared
   useEffect(() => {
+    setLoading(true);
     fetchRooms().then((data) => {
       setRooms(data);
       setFilteredRooms(data);
+      setLoading(false);
     });
   }, []);
 
@@ -111,6 +114,10 @@ function Rooms() {
       navigate("/");
     }, 1200); // Give a short delay for toast, then redirect
   };
+
+  if (loading) {
+    return <Loader />;
+  }
 
   return (
     <div className="rooms-page">
