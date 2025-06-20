@@ -65,24 +65,26 @@
 .dog-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px 30px;
+  gap: 0px 30px;
   align-items: flex-end;
   margin-bottom: 18px;
 }
 .dog-form label {
-  display: flex;
-  flex-direction: column;
+  display: block;
+  margin-bottom: 8px;
+  color: #3b1d0f;
   font-weight: 500;
   gap: 4px;
+  display: flex;
+  flex-direction: column;
 }
 .dog-form input[type="file"] {
   margin-top: 4px;
 }
 .dog-form-error {
   color: #e74c3c;
-  font-size: 1em;
+  font-size: 0.95em;
   margin-top: 6px;
-  width: 100%;
 }
 .dog-preview {
   border: 1px solid #e5d8c7;
@@ -138,6 +140,56 @@
   justify-content: flex-end;
   margin-top: 10px;
 }
+.profile-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #2c1c07;
+  font-size: 1em;
+  margin-bottom: 10px;
+  color: #3b1d0f;
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.profile-input:focus {
+  border: 1.5px solid #bb7c48;
+  box-shadow: 0 0 0 2px #f3e3d1;
+  background: #fff;
+}
+.profile-input:hover {
+  border: 1.5px solid #bb7c48;
+}
+
+.profile-photo-upload-btn {
+  display: inline-block;
+  margin-top: 10px;
+  background: #bb7c48;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 22px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-align: center;
+}
+.profile-photo-upload-btn:hover {
+  background: #3b1d0f;
+  color: #fff;
+}
+
+.profile-photo-uploading {
+  color: #bb7c48;
+  font-size: 0.95em;
+  margin-top: 6px;
+}
+.profile-photo-error {
+  color: #e74c3c;
+  font-size: 0.95em;
+  margin-top: 6px;
+}
+
 .save-dog-btn {
   background: #3b1d0f;
   color: #fff;
@@ -150,22 +202,25 @@
   transition: background 0.2s, color 0.2s;
 }
 .save-dog-btn:disabled {
-  background: #e5d8c7;
-  color: #a89b8b;
+  opacity: 0.7;
   cursor: not-allowed;
 }
+.save-dog-btn:hover:not(:disabled) {
+  background: #bb7c48;
+  color: #fff;
+}
+
 .add-another-dog-btn {
   background: #bb7c48;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 8px 20px;
+  border-radius: 10px;
+  padding: 10px 28px;
   font-size: 1em;
-  font-weight: 500;
-  margin: 18px 0 0 0;
+  font-weight: 600;
   cursor: pointer;
+  margin-top: 12px;
   transition: background 0.2s, color 0.2s;
-  display: block;
 }
 .add-another-dog-btn:hover {
   background: #3b1d0f;

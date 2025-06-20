@@ -11,20 +11,20 @@ import CONFIG from "../../config";
 // Fetch rooms from backend API
 async function fetchRooms() {
   try {
-    console.log('Fetching rooms from:', CONFIG.API_URL + 'rooms');
-    const response = await fetch(CONFIG.API_URL + 'rooms');
+    console.log("Fetching rooms from:", CONFIG.API_URL + "rooms");
+    const response = await fetch(CONFIG.API_URL + "rooms");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    console.log('Fetched rooms:', data);
+    console.log("Fetched rooms:", data);
     // Convert array to object for compatibility with existing code
     if (Array.isArray(data)) {
       return data;
     }
     return Object.values(data);
   } catch (error) {
-    console.error('Error fetching rooms:', error);
+    console.error("Error fetching rooms:", error);
     // Return empty array as fallback
     return [];
   }
@@ -106,8 +106,10 @@ function Rooms() {
 
   const handleBookingSave = (data) => {
     setBookingOpen(false);
-    setSelectedRoomId(null);
     setToastOpen(true);
+    setTimeout(() => {
+      navigate("/");
+    }, 1200); // Give a short delay for toast, then redirect
   };
 
   return (

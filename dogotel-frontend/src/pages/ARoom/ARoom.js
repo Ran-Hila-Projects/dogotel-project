@@ -5,7 +5,7 @@ import ReviewCard from "../../components/ReviewCard/ReviewCard";
 import { ReactComponent as DogIcon } from "../../assets/icons/dog-icon.svg";
 import { ReactComponent as RulerIcon } from "../../assets/icons/ruler-icon.svg";
 import { ReactComponent as DollarIcon } from "../../assets/icons/dollar-icon.svg";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import ReviewWritingPopup from "../../components/ReviewWritingPopup/ReviewWritingPopup";
@@ -36,6 +36,7 @@ function ARoom() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [showReviewPopup, setShowReviewPopup] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
+  const navigate = useNavigate();
   // TODO: Replace with real user from auth context
   const currentUser = {
     email: "user@example.com",
@@ -111,7 +112,9 @@ function ARoom() {
   const handleBookingSave = (data) => {
     setBookingOpen(false);
     setToastOpen(true);
-    // Optionally show a success message
+    setTimeout(() => {
+      navigate("/");
+    }, 1200); // Give a short delay for toast, then redirect
   };
 
   useEffect(() => {
@@ -193,15 +196,17 @@ function ARoom() {
       {/* Reviews Section */}
       <section className="reviews-section">
         <h2>Owner Reviews</h2>
-        {canAddReview && (
-          <button
-            className="add-review-btn"
-            onClick={() => setShowReviewPopup(true)}
-            style={{ marginBottom: 16 }}
-          >
-            Add a review
-          </button>
-        )}
+        <div className="add-review-btn-container">
+          {canAddReview && (
+            <button
+              className="add-review-btn"
+              onClick={() => setShowReviewPopup(true)}
+              style={{ marginBottom: 16 }}
+            >
+              Add a review
+            </button>
+          )}
+        </div>
         <div className="reviews-list">
           {roomData.reviews.map((review, index) => (
             <ReviewCard

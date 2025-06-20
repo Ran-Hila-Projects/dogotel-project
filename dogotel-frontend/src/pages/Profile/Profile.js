@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Profile.css";
 import CONFIG from "../../config";
 
@@ -10,25 +10,7 @@ const userData = {
   photo: "https://via.placeholder.com/150",
 };
 
-// Dummy booking history
-const bookingHistory = [
-  {
-    bookingNumber: "B001",
-    dates: "2025-06-15 to 2025-06-18",
-    dogs: ["Rocky"],
-    diningSelection: "Premium",
-    servicesSelection: "Grooming",
-    totalPrice: 250,
-  },
-  {
-    bookingNumber: "B002",
-    dates: "2025-07-10 to 2025-07-13",
-    dogs: ["Max"],
-    diningSelection: "Standard",
-    servicesSelection: "Training",
-    totalPrice: 300,
-  },
-];
+// Booking history state will be fetched from server
 
 const emptyDogForm = {
   name: "",
@@ -43,6 +25,68 @@ function Profile() {
   const [dogs, setDogs] = useState([]);
   const [dogForms, setDogForms] = useState([{ ...emptyDogForm }]);
   const [activeTab, setActiveTab] = useState("profile");
+  const [profilePhoto, setProfilePhoto] = useState(userData.photo);
+  const [profileUploading, setProfileUploading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [bookingHistory, setBookingHistory] = useState([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+
+  // Fetch booking history from server on mount
+  useEffect(() => {
+    async function fetchBookingHistory() {
+      setBookingLoading(true);
+      setBookingError("");
+      try {
+        const res = await fetch(
+          CONFIG.API_URL + `api/bookings/${userData.email}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch booking history");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setBookingHistory(data);
+        } else {
+          setBookingHistory([]);
+        }
+      } catch (err) {
+        setBookingError("Could not load booking history");
+        setBookingHistory([]);
+      } finally {
+        setBookingLoading(false);
+      }
+    }
+    fetchBookingHistory();
+  }, []);
+
+  const handleProfilePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setProfileUploading(true);
+    setProfileError("");
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      try {
+        // Save to server
+        const res = await fetch(CONFIG.API_URL + "api/user/profile-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: userData.email, photo: base64 }),
+        });
+        const data = await res.json();
+        if (data.success && data.photoUrl) {
+          setProfilePhoto(data.photoUrl);
+        } else {
+          setProfileError(data.error || "Failed to upload profile photo");
+        }
+      } catch (err) {
+        setProfileError("Failed to upload profile photo");
+      } finally {
+        setProfileUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleDogPhotoChange = async (e, idx) => {
     const file = e.target.files[0];
@@ -155,11 +199,29 @@ function Profile() {
       {activeTab === "profile" && (
         <>
           <div className="user-info-profile">
-            <img
-              src={userData.photo}
-              alt={userData.username}
-              className="user-photo"
-            />
+            <div style={{ position: "relative" }}>
+              <img
+                src={profilePhoto}
+                alt={userData.username}
+                className="user-photo"
+              />
+              <label className="profile-photo-upload-btn">
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleProfilePhotoChange}
+                  disabled={profileUploading}
+                />
+                <span>Change Photo</span>
+              </label>
+              {profileUploading && (
+                <div className="profile-photo-uploading">Uploading...</div>
+              )}
+              {profileError && (
+                <div className="profile-photo-error">{profileError}</div>
+              )}
+            </div>
             <div className="user-details">
               <p>
                 <strong>Username:</strong> {userData.username}
@@ -187,6 +249,7 @@ function Profile() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleDogPhotoChange(e, idx)}
+                    className="profile-input"
                   />
                 </label>
                 {dogForm.photo && (
@@ -210,6 +273,7 @@ function Profile() {
                     value={dogForm.name}
                     onChange={(e) => handleDogFormChange(e, idx)}
                     required
+                    className="profile-input"
                   />
                 </label>
                 <label>
@@ -221,6 +285,7 @@ function Profile() {
                     type="number"
                     min="0"
                     required
+                    className="profile-input"
                   />
                 </label>
                 <label>
@@ -231,6 +296,7 @@ function Profile() {
                     onChange={(e) => handleDogFormChange(e, idx)}
                     required
                     readOnly={!!dogForm.photo}
+                    className="profile-input"
                   />
                 </label>
                 {dogForm.uploading && <div>Identifying breed...</div>}
@@ -286,9 +352,14 @@ function Profile() {
       {activeTab === "history" && (
         <>
           <h2 className="booking-history-title">Booking History</h2>
+          {bookingLoading && <div>Loading booking history...</div>}
+          {bookingError && (
+            <div style={{ color: "#e74c3c" }}>{bookingError}</div>
+          )}
           <table className="booking-history-table">
             <thead>
               <tr>
+                <th>Room</th>
                 <th>Booking Number</th>
                 <th>Dates</th>
                 <th>Dogs</th>
@@ -298,14 +369,45 @@ function Profile() {
               </tr>
             </thead>
             <tbody>
-              {bookingHistory.map((booking) => (
-                <tr key={booking.bookingNumber}>
-                  <td>{booking.bookingNumber}</td>
-                  <td>{booking.dates}</td>
-                  <td>{booking.dogs.join(", ")}</td>
-                  <td>{booking.diningSelection}</td>
-                  <td>{booking.servicesSelection}</td>
-                  <td>${booking.totalPrice}</td>
+              {bookingHistory.map((booking, idx) => (
+                <tr key={booking.bookingNumber || idx}>
+                  <td>
+                    {booking.roomName ||
+                      booking.roomTitle ||
+                      booking.room ||
+                      "-"}
+                  </td>
+                  <td>
+                    {booking.bookingNumber || booking.id || booking._id || "-"}
+                  </td>
+                  <td>
+                    {booking.dates
+                      ? booking.dates
+                      : booking.startDate && booking.endDate
+                      ? `${booking.startDate} to ${booking.endDate}`
+                      : "-"}
+                  </td>
+                  <td>
+                    {Array.isArray(booking.dogs)
+                      ? booking.dogs
+                          .map((d) => (typeof d === "string" ? d : d.name))
+                          .join(", ")
+                      : "-"}
+                  </td>
+                  <td>{booking.diningSelection || booking.dining || "-"}</td>
+                  <td>
+                    {booking.servicesSelection ||
+                      (Array.isArray(booking.services)
+                        ? booking.services.map((s) => s.name || s).join(", ")
+                        : "-")}
+                  </td>
+                  <td>
+                    $
+                    {booking.totalPrice ||
+                      booking.price ||
+                      booking.total ||
+                      "-"}
+                  </td>
                 </tr>
               ))}
             </tbody>
