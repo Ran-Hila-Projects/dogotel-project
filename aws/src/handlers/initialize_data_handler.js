@@ -53,8 +53,20 @@ async function handleInitializeData(event) {
             services: { success: 0, total: 0 }
         };
 
-        // Create sample rooms
-        const roomResults = await createSampleRooms();
+        // Parse request body for custom room data
+        let roomData = null;
+        if (event.body) {
+            try {
+                const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+                roomData = body.rooms;
+                console.log('Received room data:', roomData ? roomData.length : 0, 'rooms');
+            } catch (parseError) {
+                console.error('Error parsing request body:', parseError);
+            }
+        }
+
+        // Create rooms (from request body or sample data)
+        const roomResults = roomData ? await createRoomsFromData(roomData) : await createSampleRooms();
         results.rooms = roomResults;
 
         // Create admin user
@@ -191,6 +203,44 @@ async function createSampleRooms() {
     }
 
     return { success: successCount, total: sampleRooms.length };
+}
+
+async function createRoomsFromData(roomsData) {
+    console.log('Creating rooms from provided data...');
+    
+    let successCount = 0;
+    for (const room of roomsData) {
+        try {
+            // Convert the room data to DynamoDB format
+            const roomItem = {
+                room_id: room.id || uuidv4(),
+                title: room.title,
+                subtitle: room.subtitle,
+                description: room.description,
+                dogsAmount: room.dogsAmount,
+                price: room.price,
+                size: room.size,
+                image: room.image,
+                included: room.included || [],
+                reviews: room.reviews || [],
+                is_available: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await docClient.send(new PutCommand({
+                TableName: ROOMS_TABLE,
+                Item: roomItem
+            }));
+            
+            successCount++;
+            console.log(`Created room: ${room.title}`);
+        } catch (error) {
+            console.error(`Error creating room ${room.title}:`, error);
+        }
+    }
+
+    return { success: successCount, total: roomsData.length };
 }
 
 async function createAdminUser() {
