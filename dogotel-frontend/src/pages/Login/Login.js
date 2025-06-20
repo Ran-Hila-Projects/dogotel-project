@@ -1,60 +1,70 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import CONFIG from "../../config";
 import "./Login.css";
 
-function Login() {
+function Login({ setIsLoggedIn, setUserName }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Password validation: at least one letter, one capital, one symbol, one number
+  function isValidPassword(pw) {
+    return (
+      /[a-z]/.test(pw) &&
+      /[A-Z]/.test(pw) &&
+      /[0-9]/.test(pw) &&
+      /[^A-Za-z0-9]/.test(pw)
+    );
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    
+
     if (!email || !password) {
       setError("Email and password are required");
       setLoading(false);
       return;
     }
-    
+    if (!isValidPassword(password)) {
+      setError(
+        "Password must contain at least one lowercase letter, one uppercase letter, one number, and one symbol."
+      );
+      setLoading(false);
+      return;
+    }
     try {
-      console.log('Attempting login with:', { email });
-      
+      console.log("Attempting login with:", { email });
       const res = await fetch(`${CONFIG.API_URL}auth/login`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          Accept: "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
-      
-      console.log('Response status:', res.status);
-      
+      console.log("Response status:", res.status);
       const data = await res.json();
-      console.log('Response data:', data);
-      
-      if (!res.ok || !data.success) {
+      console.log("Response data:", data);
+      if (!res.ok || !data.success || !data.accessToken) {
         throw new Error(data.error || "Login failed");
       }
-      
       // Save tokens
-      if (data.accessToken) {
-        localStorage.setItem("access_token", data.accessToken);
-      }
-      if (data.idToken) {
-        localStorage.setItem("id_token", data.idToken);
-      }
-      if (data.refreshToken) {
+      localStorage.setItem("access_token", data.accessToken);
+      if (data.idToken) localStorage.setItem("id_token", data.idToken);
+      if (data.refreshToken)
         localStorage.setItem("refresh_token", data.refreshToken);
-      }
-      
+      // Save userName/email for nav initials
+      localStorage.setItem("userName", data.userName || email);
+      setIsLoggedIn(true);
+      setUserName(data.userName || email);
       // Redirect to home page
       window.location.href = "/";
     } catch (err) {
-      console.error('Login error:', err);
+      console.error("Login error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -62,32 +72,34 @@ function Login() {
   };
 
   return (
-    <div className="login-page">
-      <h1>Log In</h1>
-      <form className="login-form" onSubmit={handleSubmit}>
-        <label>
-          Email:
+    <div className="login-outer">
+      <div className="login-card">
+        <h2 className="login-title">Welcome Back</h2>
+        <div className="login-subtitle">Sign in to your Dogotel account</div>
+        <form className="login-form" onSubmit={handleSubmit}>
           <input
             type="email"
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Password:
           <input
             type="password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </label>
-        {error && <div className="login-error">{error}</div>}
-        <button type="submit" disabled={loading} className="login-btn">
-          {loading ? "Logging in..." : "Log In"}
-        </button>
-      </form>
+          {error && <div className="login-error">{error}</div>}
+          <button type="submit" disabled={loading} className="login-btn">
+            {loading ? "Logging in..." : "Log In"}
+          </button>
+        </form>
+        <div className="login-bottom-text">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </div>
+      </div>
     </div>
   );
 }

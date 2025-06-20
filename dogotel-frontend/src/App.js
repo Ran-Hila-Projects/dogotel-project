@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./general.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar/Navbar";
@@ -16,10 +16,27 @@ import Signup from "./pages/Signup/Signup";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const userName = "Hila Tsivion";
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    // On app load, check for accessToken and user info
+    const accessToken =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
+    const storedName = localStorage.getItem("userName");
+    if (accessToken) {
+      setIsLoggedIn(true);
+      if (storedName) setUserName(storedName);
+    } else {
+      setIsLoggedIn(false);
+      setUserName("");
+    }
+  }, []);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserName("");
+    localStorage.clear();
   };
 
   return (
@@ -39,8 +56,18 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/admin" element={<AdminPage userName={userName} />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/login"
+            element={
+              <Login setIsLoggedIn={setIsLoggedIn} setUserName={setUserName} />
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <Signup setIsLoggedIn={setIsLoggedIn} setUserName={setUserName} />
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

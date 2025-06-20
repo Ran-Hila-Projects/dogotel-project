@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import CONFIG from "../../config";
 import "./Signup.css";
 
-function Signup() {
+function Signup({ setIsLoggedIn, setUserName }) {
   const navigate = useNavigate();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -14,37 +14,45 @@ function Signup() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Password validation: at least one letter, one capital, one symbol, one number
+  function isValidPassword(pw) {
+    return (
+      /[a-z]/.test(pw) &&
+      /[A-Z]/.test(pw) &&
+      /[0-9]/.test(pw) &&
+      /[^A-Za-z0-9]/.test(pw)
+    );
+  }
+
   const attemptAutoLogin = async (email, password) => {
     try {
       const loginRes = await fetch(`${CONFIG.API_URL}auth/login`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          Accept: "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
-      
       const loginData = await loginRes.json();
-      
-      if (loginRes.ok && loginData.success) {
-        console.log('Auto-login successful');
-        
+      if (loginRes.ok && loginData.success && loginData.accessToken) {
         // Store tokens in localStorage
-        localStorage.setItem('accessToken', loginData.accessToken);
-        localStorage.setItem('idToken', loginData.idToken);
-        localStorage.setItem('refreshToken', loginData.refreshToken);
-        localStorage.setItem('userEmail', email);
-        
+        localStorage.setItem("access_token", loginData.accessToken);
+        if (loginData.idToken)
+          localStorage.setItem("id_token", loginData.idToken);
+        if (loginData.refreshToken)
+          localStorage.setItem("refresh_token", loginData.refreshToken);
+        localStorage.setItem("userName", loginData.userName || email);
+        setIsLoggedIn(true);
+        setUserName(loginData.userName || email);
         // Redirect to home page
         setTimeout(() => {
-          navigate('/');
-        }, 1500); // Short delay to show success message
+          navigate("/");
+        }, 1500);
       } else {
-        console.log('Auto-login failed, user will need to login manually');
+        // Don't show error - just let user login manually
       }
     } catch (err) {
-      console.error('Auto-login error:', err);
       // Don't show error - just let user login manually
     }
   };
@@ -53,52 +61,43 @@ function Signup() {
     e.preventDefault();
     setError("");
     setSuccess(false);
-    
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
-    
-    if (!firstName || !lastName || !email || !password) {
+    if (!fullName || !birthday || !email || !password) {
       setError("All fields are required");
       return;
     }
-    
+    if (!isValidPassword(password)) {
+      setError(
+        "Password must contain at least one lowercase letter, one uppercase letter, one number, and one symbol."
+      );
+      return;
+    }
     setLoading(true);
-    
     try {
-      console.log('Attempting signup with:', { firstName, lastName, email });
-      
       const res = await fetch(`${CONFIG.API_URL}auth/register`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          Accept: "application/json",
         },
-        body: JSON.stringify({ 
-          firstName, 
-          lastName, 
-          email, 
-          password 
+        body: JSON.stringify({
+          fullName,
+          birthday,
+          email,
+          password,
         }),
       });
-      
-      console.log('Response status:', res.status);
-      
       const data = await res.json();
-      console.log('Response data:', data);
-      
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Signup failed");
       }
-      
       setSuccess(true);
-      
       // Auto-login after successful signup
-      console.log('Signup successful, attempting auto-login...');
       await attemptAutoLogin(email, password);
     } catch (err) {
-      console.error('Signup error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -106,64 +105,62 @@ function Signup() {
   };
 
   return (
-    <div className="signup-page">
-      <h1>Sign Up</h1>
-      <form className="signup-form" onSubmit={handleSubmit}>
-        <label>
-          First Name:
+    <div className="signup-outer">
+      <div className="signup-card">
+        <h2 className="signup-title">Create An Account</h2>
+        <div className="signup-subtitle">
+          Create an account to enjoy all the services we have!
+        </div>
+        <form className="signup-form" onSubmit={handleSubmit}>
           <input
             type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="Full Name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Last Name:
           <input
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            type="date"
+            placeholder="Birthday"
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Email:
           <input
             type="email"
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Password:
           <input
             type="password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Confirm Password:
           <input
             type="password"
+            placeholder="Confirm Password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
-        </label>
-        {error && <div className="signup-error">{error}</div>}
-        {success && (
-          <div className="signup-success">
-            Signup successful! Logging you in and redirecting to home page...
-          </div>
-        )}
-        <button type="submit" disabled={loading} className="signup-btn">
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-      </form>
+          {error && <div className="signup-error">{error}</div>}
+          {success && (
+            <div className="signup-success">
+              Signup successful! Logging you in and redirecting to home page...
+            </div>
+          )}
+          <button type="submit" disabled={loading} className="signup-btn">
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
+        <div className="signup-bottom-text">
+          Already Have An Account? <Link to="/login">Sign In</Link>
+        </div>
+      </div>
     </div>
   );
 }
