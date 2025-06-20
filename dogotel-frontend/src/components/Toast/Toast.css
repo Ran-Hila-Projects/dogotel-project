@@ -32,3 +32,63 @@
     transform: translateX(-50%) translateY(-20px);
   }
 }
+
+.not-loggedin-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(60, 31, 16, 0.25);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.not-loggedin-popup-modal {
+  background: #fff;
+  border-radius: 18px;
+  padding: 36px 40px 30px 40px;
+  min-width: 350px;
+  max-width: 95vw;
+  box-shadow: 0 8px 40px rgba(60, 31, 16, 0.18);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.not-loggedin-btn {
+  background: #bb7c48;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 28px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.not-loggedin-btn:hover {
+  background: #3b1d0f;
+  color: #fff;
+}
+
+.not-loggedin-close-btn {
+  background: #fff;
+  color: #bb7c48;
+  border: 1.5px solid #bb7c48;
+  border-radius: 10px;
+  padding: 8px 22px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.not-loggedin-close-btn:hover {
+  background: #f8f2eb;
+  color: #3b1d0f;
+}

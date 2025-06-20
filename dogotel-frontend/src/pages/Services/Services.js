@@ -7,11 +7,15 @@ import skillImage from "../../assets/images/skill-service.jpg";
 import fitnessImage from "../../assets/images/train-service.jpg";
 import Footer from "../../components/Footer/Footer";
 import Toast from "../../components/Toast/Toast";
+import { NotLoggedInPopup } from "../../components/Toast/Toast";
+import { useNavigate } from "react-router-dom";
 
-function Services() {
+function Services({ isLoggedIn }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [added, setAdded] = useState("");
   const [toastOpen, setToastOpen] = useState(false);
+  const [notLoggedInOpen, setNotLoggedInOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,6 +76,10 @@ function Services() {
   ];
 
   const handleAddService = (service) => {
+    if (!isLoggedIn) {
+      setNotLoggedInOpen(true);
+      return;
+    }
     let cart = {};
     try {
       cart = JSON.parse(localStorage.getItem("dogotelBooking")) || {};
@@ -137,6 +145,18 @@ function Services() {
         message="Service added to cart!"
         open={toastOpen}
         onClose={() => setToastOpen(false)}
+      />
+      <NotLoggedInPopup
+        open={notLoggedInOpen}
+        onClose={() => setNotLoggedInOpen(false)}
+        onSignIn={() => {
+          setNotLoggedInOpen(false);
+          navigate("/login");
+        }}
+        onSignUp={() => {
+          setNotLoggedInOpen(false);
+          navigate("/signup");
+        }}
       />
     </div>
   );

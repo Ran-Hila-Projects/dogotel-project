@@ -7,6 +7,7 @@ import BookingPopup from "../../components/BookingPopup/BookingPopup";
 import Loader from "../../components/Loader/Loader";
 import Toast from "../../components/Toast/Toast";
 import CONFIG from "../../config";
+import { NotLoggedInPopup } from "../../components/Toast/Toast";
 
 // Fetch rooms from backend API
 async function fetchRooms() {
@@ -34,7 +35,7 @@ function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
-function Rooms() {
+function Rooms({ isLoggedIn }) {
   const query = useQuery();
   const navigate = useNavigate();
   const [checkin, setCheckin] = useState(query.get("checkin") || "");
@@ -48,6 +49,7 @@ function Rooms() {
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [toastOpen, setToastOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notLoggedInOpen, setNotLoggedInOpen] = useState(false);
 
   // Fetch rooms on mount or when cleared
   useEffect(() => {
@@ -98,6 +100,10 @@ function Rooms() {
 
   const handleBookClick = (e, roomId) => {
     e.stopPropagation();
+    if (!isLoggedIn) {
+      setNotLoggedInOpen(true);
+      return;
+    }
     setSelectedRoomId(roomId);
     setBookingOpen(true);
   };
@@ -246,6 +252,18 @@ function Rooms() {
         message="Room added to cart!"
         open={toastOpen}
         onClose={() => setToastOpen(false)}
+      />
+      <NotLoggedInPopup
+        open={notLoggedInOpen}
+        onClose={() => setNotLoggedInOpen(false)}
+        onSignIn={() => {
+          setNotLoggedInOpen(false);
+          navigate("/login");
+        }}
+        onSignUp={() => {
+          setNotLoggedInOpen(false);
+          navigate("/signup");
+        }}
       />
     </div>
   );

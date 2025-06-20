@@ -3,17 +3,25 @@ import "./Dining.css";
 import DiningCard from "../../components/DiningCard/DiningCard";
 import Footer from "../../components/Footer/Footer";
 import Toast from "../../components/Toast/Toast";
+import { NotLoggedInPopup } from "../../components/Toast/Toast";
+import { useNavigate } from "react-router-dom";
 
 // import dog meal images
 import breakfastImage from "../../assets/images/dog-breakfast.jpg";
 import dinnerImage from "../../assets/images/dog-dinner.jpg";
 import customImage from "../../assets/images/dog-custom-meal.jpg";
 
-function Dining() {
+function Dining({ isLoggedIn }) {
   const [added, setAdded] = React.useState("");
   const [toastOpen, setToastOpen] = React.useState(false);
+  const [notLoggedInOpen, setNotLoggedInOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const handleAddDining = (dining) => {
+    if (!isLoggedIn) {
+      setNotLoggedInOpen(true);
+      return;
+    }
     let cart = {};
     try {
       cart = JSON.parse(localStorage.getItem("dogotelBooking")) || {};
@@ -85,6 +93,18 @@ function Dining() {
         message="Dining option added to cart!"
         open={toastOpen}
         onClose={() => setToastOpen(false)}
+      />
+      <NotLoggedInPopup
+        open={notLoggedInOpen}
+        onClose={() => setNotLoggedInOpen(false)}
+        onSignIn={() => {
+          setNotLoggedInOpen(false);
+          navigate("/login");
+        }}
+        onSignUp={() => {
+          setNotLoggedInOpen(false);
+          navigate("/signup");
+        }}
       />
     </div>
   );
