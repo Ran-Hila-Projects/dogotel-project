@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Profile.css";
 import CONFIG from "../../config";
 import Loader from "../../components/Loader/Loader";
-import avatarPlaceholder from "../../assets/images/avatar-placeholder.jpg";
+import avatarPlaceholder from "../../assets/images/profile-img.jpg";
 
 // Dummy user data
 const userData = {
@@ -97,13 +97,13 @@ function Profile() {
   const handleDogPhotoChange = async (e, idx) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       updateDogForm(idx, { error: "Please select a valid image file" });
       return;
     }
-    
+
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       updateDogForm(idx, { error: "Image must be smaller than 5MB" });
@@ -115,7 +115,7 @@ function Profile() {
     reader.onloadend = async () => {
       const base64 = reader.result;
       updateDogForm(idx, { photo: base64, uploading: true, error: "" });
-      
+
       try {
         console.log("Sending image to Rekognition...");
         const res = await fetch(
@@ -126,32 +126,32 @@ function Profile() {
             body: JSON.stringify({ image: base64 }),
           }
         );
-        
+
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
-        
+
         const data = await res.json();
         console.log("Rekognition response:", data);
-        
+
         if (data.success && data.breed) {
-          updateDogForm(idx, { 
-            breed: data.breed, 
+          updateDogForm(idx, {
+            breed: data.breed,
             uploading: false,
             breedDetected: `✅ Detected: ${data.breed} (${data.confidence}% confidence)`,
-            error: ""
+            error: "",
           });
         } else if (data.error) {
           updateDogForm(idx, {
             uploading: false,
             error: data.error,
-            breedDetected: ""
+            breedDetected: "",
           });
         } else {
           updateDogForm(idx, {
             uploading: false,
             error: "Could not identify breed. Please enter manually.",
-            breedDetected: ""
+            breedDetected: "",
           });
         }
       } catch (err) {
@@ -159,7 +159,7 @@ function Profile() {
         updateDogForm(idx, {
           uploading: false,
           error: "Error analyzing image. Please enter breed manually.",
-          breedDetected: ""
+          breedDetected: "",
         });
       }
     };
@@ -342,21 +342,44 @@ function Profile() {
                     onChange={(e) => handleDogFormChange(e, idx)}
                     required
                     className="profile-input"
-                    placeholder={dogForm.uploading ? "Analyzing image..." : "Enter breed or upload photo"}
+                    placeholder={
+                      dogForm.uploading
+                        ? "Analyzing image..."
+                        : "Enter breed or upload photo"
+                    }
                   />
                 </label>
                 {dogForm.uploading && (
-                  <div style={{ color: "#3498db", fontSize: "14px", margin: "5px 0" }}>
+                  <div
+                    style={{
+                      color: "#3498db",
+                      fontSize: "14px",
+                      margin: "5px 0",
+                    }}
+                  >
                     🔍 Identifying breed...
                   </div>
                 )}
                 {dogForm.breedDetected && (
-                  <div style={{ color: "#27ae60", fontSize: "14px", margin: "5px 0" }}>
+                  <div
+                    style={{
+                      color: "#27ae60",
+                      fontSize: "14px",
+                      margin: "5px 0",
+                    }}
+                  >
                     {dogForm.breedDetected}
                   </div>
                 )}
                 {dogForm.error && (
-                  <div className="dog-form-error" style={{ color: "#e74c3c", fontSize: "14px", margin: "5px 0" }}>
+                  <div
+                    className="dog-form-error"
+                    style={{
+                      color: "#e74c3c",
+                      fontSize: "14px",
+                      margin: "5px 0",
+                    }}
+                  >
                     {dogForm.error}
                   </div>
                 )}
