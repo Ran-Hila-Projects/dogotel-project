@@ -5,7 +5,6 @@ import Loader from "../../components/Loader/Loader";
 import avatarPlaceholder from "../../assets/images/profile-img.jpg";
 import Admin from "../Admin/Admin";
 
-
 // Default user data structure
 const defaultUserData = {
   username: "Loading...",
@@ -34,12 +33,6 @@ function Profile() {
   const [profilePhoto, setProfilePhoto] = useState(avatarPlaceholder);
   const [profileUploading, setProfileUploading] = useState(false);
   const [profileError, setProfileError] = useState("");
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    username: "",
-    birthdate: "",
-    email: ""
-  });
   const [bookingHistory, setBookingHistory] = useState([]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
@@ -49,19 +42,19 @@ function Profile() {
   const checkAdminStatus = async (userEmail) => {
     try {
       const response = await fetch(CONFIG.API_URL + `auth/check-admin`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: userEmail })
+        body: JSON.stringify({ email: userEmail }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.isAdmin || false;
       }
     } catch (error) {
-      console.error('Error checking admin status:', error);
+      console.error("Error checking admin status:", error);
     }
     return false;
   };
@@ -70,23 +63,23 @@ function Profile() {
   const getCurrentUserEmail = () => {
     // In a real app, this would come from your auth context/JWT token
     // For now, check localStorage or use a default
-    const storedUser = localStorage.getItem('currentUser');
+    const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
         return user.email;
       } catch (e) {
-        console.error('Error parsing stored user:', e);
+        console.error("Error parsing stored user:", e);
       }
     }
-    
+
     // Check URL parameter for testing different users
     const urlParams = new URLSearchParams(window.location.search);
-    const testUser = urlParams.get('user');
+    const testUser = urlParams.get("user");
     if (testUser) {
       return testUser;
     }
-    
+
     // Fallback for development - use a regular user, not admin
     return "user@example.com"; // Regular user for testing
   };
@@ -96,115 +89,111 @@ function Profile() {
     async function fetchUserProfile() {
       try {
         const userEmail = getCurrentUserEmail();
-        console.log('Fetching profile for:', userEmail);
-        
+        console.log("Fetching profile for:", userEmail);
+
         // Check admin status first
         const isAdmin = await checkAdminStatus(userEmail);
-        console.log('Admin status:', isAdmin);
-        
+        console.log("Admin status:", isAdmin);
+
         // Fetch user profile (decode the email first to ensure proper format)
         const decodedEmail = decodeURIComponent(userEmail);
-        const profileRes = await fetch(CONFIG.API_URL + `user/${encodeURIComponent(decodedEmail)}`);
+        const profileRes = await fetch(
+          CONFIG.API_URL + `user/${encodeURIComponent(decodedEmail)}`
+        );
         let profileData = null;
-        
+
         if (profileRes.ok) {
           profileData = await profileRes.json();
-          console.log('Profile response:', profileData);
+          console.log("Profile response:", profileData);
         } else {
-          console.log('Profile fetch failed:', profileRes.status);
+          console.log("Profile fetch failed:", profileRes.status);
           // Create default user data if not found
           profileData = {
             success: true,
             user: {
-              username: decodedEmail.split('@')[0], // Use email prefix as username
+              username: decodedEmail.split("@")[0], // Use email prefix as username
               email: decodedEmail,
               birthdate: "Not provided",
               photo: "",
-              isAdmin: isAdmin
-            }
+              isAdmin: isAdmin,
+            },
           };
         }
-        
+
         if (profileData && profileData.success && profileData.user) {
           const updatedUser = {
             ...profileData.user,
-            isAdmin: isAdmin
+            isAdmin: isAdmin,
           };
           setUserData(updatedUser);
           setProfilePhoto(updatedUser.photo || avatarPlaceholder);
-          setProfileForm({
-            username: updatedUser.username || "",
-            birthdate: updatedUser.birthdate || "",
-            email: updatedUser.email || ""
-          });
         } else {
           // Fallback user data
           const fallbackUser = {
-            username: decodedEmail.split('@')[0],
+            username: decodedEmail.split("@")[0],
             email: decodedEmail,
             birthdate: "1990-01-01",
             photo: "",
-            isAdmin: isAdmin
+            isAdmin: isAdmin,
           };
           setUserData(fallbackUser);
-          setProfileForm({
-            username: fallbackUser.username,
-            birthdate: fallbackUser.birthdate,
-            email: fallbackUser.email
-          });
         }
-        
+
         // Fetch booking history only if not admin (admin will see all bookings in admin panel)
         if (!isAdmin) {
           setBookingLoading(true);
           setBookingError("");
-          
+
           try {
-            const bookingRes = await fetch(CONFIG.API_URL + `bookings/${encodeURIComponent(decodedEmail)}`);
-            console.log('Booking history response status:', bookingRes.status);
-            
+            const bookingRes = await fetch(
+              CONFIG.API_URL + `bookings/${encodeURIComponent(decodedEmail)}`
+            );
+            console.log("Booking history response status:", bookingRes.status);
+
             if (bookingRes.ok) {
               const bookingData = await bookingRes.json();
-              console.log('Booking history data:', bookingData);
-              
+              console.log("Booking history data:", bookingData);
+
               if (bookingData.success && Array.isArray(bookingData.history)) {
                 setBookingHistory(bookingData.history);
-              } else if (bookingData.success && Array.isArray(bookingData.bookings)) {
+              } else if (
+                bookingData.success &&
+                Array.isArray(bookingData.bookings)
+              ) {
                 setBookingHistory(bookingData.bookings);
               } else {
-                console.log('No booking history found');
+                console.log("No booking history found");
                 setBookingHistory([]);
               }
             } else {
-              console.log('Booking history fetch failed:', bookingRes.status);
+              console.log("Booking history fetch failed:", bookingRes.status);
               setBookingHistory([]);
             }
           } catch (bookingErr) {
-            console.error('Booking history error:', bookingErr);
+            console.error("Booking history error:", bookingErr);
             setBookingError("Could not load booking history");
             setBookingHistory([]);
           }
         }
-        
       } catch (err) {
-        console.error('Profile fetch error:', err);
+        console.error("Profile fetch error:", err);
         setProfileError("Could not load profile");
         // Set fallback data
         const userEmail = getCurrentUserEmail();
         const decodedEmail = decodeURIComponent(userEmail);
         setUserData({
-          username: decodedEmail.split('@')[0],
+          username: decodedEmail.split("@")[0],
           email: decodedEmail,
           birthdate: "Not provided",
           photo: "",
-          isAdmin: false
+          isAdmin: false,
         });
       } finally {
         setBookingLoading(false);
         setProfileLoading(false);
       }
     }
-    
+
     fetchUserProfile();
   }, []);
 
@@ -365,70 +354,24 @@ function Profile() {
     setDogForms((forms) => [...forms, { ...emptyDogForm }]);
   };
 
-  const handleProfileFormChange = (e) => {
-    const { name, value } = e.target;
-    setProfileForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
-    setProfileUploading(true);
-    setProfileError("");
-
-    try {
-      const response = await fetch(CONFIG.API_URL + "user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profileForm),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setUserData(prev => ({
-          ...prev,
-          username: data.user.username,
-          birthdate: data.user.birthdate,
-          email: data.user.email
-        }));
-        setEditingProfile(false);
-        alert("✅ Profile updated successfully!");
-      } else {
-        setProfileError(data.error || "Failed to update profile");
-      }
-    } catch (err) {
-      console.error("Profile update error:", err);
-      setProfileError("Failed to update profile");
-    } finally {
-      setProfileUploading(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setProfileForm({
-      username: userData.username || "",
-      birthdate: userData.birthdate || "",
-      email: userData.email || ""
-    });
-    setEditingProfile(false);
-    setProfileError("");
-  };
-
   if (profileLoading) {
     return <Loader />;
   }
 
   // If user is admin, show admin dashboard instead of regular profile
   if (userData.isAdmin) {
-    return <Admin userName={userData.username} userEmail={userData.email} isAdmin={true} />;
+    return (
+      <Admin
+        userName={userData.username}
+        userEmail={userData.email}
+        isAdmin={true}
+      />
+    );
   }
 
   return (
     <div className="profile-page">
       <h1>Profile</h1>
-      
 
       <div className="profile-tabs">
         <button
@@ -471,129 +414,19 @@ function Profile() {
               )}
             </div>
             <div className="user-details">
-              {!editingProfile ? (
-                <>
-                  <p>
-                    <strong>Username:</strong> {userData.username}
-                  </p>
-                  <p>
-                    <strong>Birthdate:</strong> {userData.birthdate}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {userData.email}
-                  </p>
-                  {userData.isAdmin && (
-                    <p style={{ color: "#e74c3c", fontWeight: "bold" }}>
-                      <strong>Role:</strong> Administrator
-                    </p>
-                  )}
-                  <button 
-                    onClick={() => setEditingProfile(true)}
-                    className="edit-profile-btn"
-                    style={{
-                      marginTop: "10px",
-                      padding: "8px 16px",
-                      backgroundColor: "#3498db",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Edit Profile
-                  </button>
-                </>
-              ) : (
-                <form onSubmit={handleProfileSave}>
-                  <div style={{ marginBottom: "10px" }}>
-                    <label>
-                      <strong>Username:</strong>
-                      <input
-                        type="text"
-                        name="username"
-                        value={profileForm.username}
-                        onChange={handleProfileFormChange}
-                        className="profile-input"
-                        style={{ marginLeft: "10px", padding: "4px" }}
-                        required
-                      />
-                    </label>
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <label>
-                      <strong>Birthdate:</strong>
-                      <input
-                        type="date"
-                        name="birthdate"
-                        value={profileForm.birthdate}
-                        onChange={handleProfileFormChange}
-                        className="profile-input"
-                        style={{ marginLeft: "10px", padding: "4px" }}
-                        required
-                      />
-                    </label>
-                  </div>
-                  <div style={{ marginBottom: "10px" }}>
-                    <label>
-                      <strong>Email:</strong>
-                      <input
-                        type="email"
-                        name="email"
-                        value={profileForm.email}
-                        onChange={handleProfileFormChange}
-                        className="profile-input"
-                        style={{ marginLeft: "10px", padding: "4px" }}
-                        readOnly
-                        disabled
-                      />
-                    </label>
-                    <small style={{ display: "block", color: "#666", marginTop: "2px" }}>
-                      Email cannot be changed
-                    </small>
-                  </div>
-                  {userData.isAdmin && (
-                    <p style={{ color: "#e74c3c", fontWeight: "bold", marginBottom: "10px" }}>
-                      <strong>Role:</strong> Administrator
-                    </p>
-                  )}
-                  <div style={{ marginTop: "15px" }}>
-                    <button 
-                      type="submit"
-                      disabled={profileUploading}
-                      style={{
-                        marginRight: "10px",
-                        padding: "8px 16px",
-                        backgroundColor: "#27ae60",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: profileUploading ? "not-allowed" : "pointer"
-                      }}
-                    >
-                      {profileUploading ? "Saving..." : "Save"}
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={handleCancelEdit}
-                      disabled={profileUploading}
-                      style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#95a5a6",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: profileUploading ? "not-allowed" : "pointer"
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {profileError && (
-                    <div style={{ color: "#e74c3c", marginTop: "10px" }}>
-                      {profileError}
-                    </div>
-                  )}
-                </form>
+              <p>
+                <strong>Name:</strong> {userData.firstName} {userData.lastName}
+              </p>
+              <p>
+                <strong>Birthdate:</strong> {userData.birthdate}
+              </p>
+              <p>
+                <strong>Email:</strong> {userData.email}
+              </p>
+              {userData.isAdmin && (
+                <p style={{ color: "#e74c3c", fontWeight: "bold" }}>
+                  <strong>Role:</strong> Administrator
+                </p>
               )}
             </div>
           </div>
@@ -754,7 +587,9 @@ function Profile() {
             <div style={{ color: "#e74c3c" }}>{bookingError}</div>
           )}
           {bookingHistory.length === 0 && !bookingLoading && !bookingError && (
-            <div style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+            <div
+              style={{ textAlign: "center", padding: "20px", color: "#666" }}
+            >
               <p>No booking history found.</p>
               <p>Your future bookings will appear here.</p>
             </div>
@@ -782,7 +617,11 @@ function Profile() {
                         "-"}
                     </td>
                     <td>
-                      {booking.bookingNumber || booking.bookingId || booking.id || booking._id || "-"}
+                      {booking.bookingNumber ||
+                        booking.bookingId ||
+                        booking.id ||
+                        booking._id ||
+                        "-"}
                     </td>
                     <td>
                       {booking.dates

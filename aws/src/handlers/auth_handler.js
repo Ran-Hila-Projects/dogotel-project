@@ -1,27 +1,36 @@
-const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminInitiateAuthCommand, AdminListGroupsForUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
-const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
+const {
+  CognitoIdentityProviderClient,
+  AdminCreateUserCommand,
+  AdminSetUserPasswordCommand,
+  AdminInitiateAuthCommand,
+  AdminListGroupsForUserCommand,
+} = require("@aws-sdk/client-cognito-identity-provider");
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 
-const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
+const cognitoClient = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION,
+});
 
 // Initialize DynamoDB client
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
 
 // Environment variables
-const USERS_TABLE = process.env.USERS_TABLE || 'DogotelUsers';
+const USERS_TABLE = process.env.USERS_TABLE || "DogotelUsers";
 
 exports.handler = async (event) => {
   // CORS headers - same pattern as example
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+    "Access-Control-Allow-Headers":
+      "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
     "Access-Control-Allow-Methods": "POST,OPTIONS",
     "Content-Type": "application/json",
   };
 
-  console.log('=== AUTH LAMBDA START ===');
-  console.log('Event:', JSON.stringify(event, null, 2));
+  console.log("=== AUTH LAMBDA START ===");
+  console.log("Event:", JSON.stringify(event, null, 2));
 
   // Handle preflight OPTIONS request
   if (event.httpMethod === "OPTIONS") {
@@ -36,11 +45,11 @@ exports.handler = async (event) => {
     const path = event.path;
     const method = event.httpMethod;
 
-    if (path === '/auth/register' && method === 'POST') {
+    if (path === "/auth/register" && method === "POST") {
       return await handleRegister(event, corsHeaders);
-    } else if (path === '/auth/login' && method === 'POST') {
+    } else if (path === "/auth/login" && method === "POST") {
       return await handleLogin(event, corsHeaders);
-    } else if (path === '/auth/check-admin' && method === 'POST') {
+    } else if (path === "/auth/check-admin" && method === "POST") {
       return await handleCheckAdmin(event, corsHeaders);
     } else {
       return {
@@ -48,13 +57,13 @@ exports.handler = async (event) => {
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Endpoint not found'
-        })
+          error: "Endpoint not found",
+        }),
       };
     }
   } catch (error) {
-    console.error('=== AUTH ERROR ===');
-    console.error('Error:', error);
+    console.error("=== AUTH ERROR ===");
+    console.error("Error:", error);
 
     return {
       statusCode: 500,
@@ -62,25 +71,27 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: false,
         error: error.message,
-        message: 'Authentication failed'
-      })
+        message: "Authentication failed",
+      }),
     };
   }
 };
 
 async function handleRegister(event, corsHeaders) {
   try {
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const body =
+      typeof event.body === "string" ? JSON.parse(event.body) : event.body;
     const { email, password, firstName, lastName, birthday } = body;
 
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password || !firstName || !lastName || !birthday) {
       return {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Missing required fields: email, password, firstName, lastName'
-        })
+          error:
+            "Missing required fields: email, password, firstName, lastName, birthday",
+        }),
       };
     }
 
@@ -92,12 +103,13 @@ async function handleRegister(event, corsHeaders) {
       Username: email,
       TemporaryPassword: password,
       UserAttributes: [
-        { Name: 'email', Value: email },
-        { Name: 'given_name', Value: firstName },
-        { Name: 'family_name', Value: lastName },
-        { Name: 'email_verified', Value: 'true' }
+        { Name: "email", Value: email },
+        { Name: "given_name", Value: firstName },
+        { Name: "family_name", Value: lastName },
+        { Name: "birthdate", Value: birthday },
+        { Name: "email_verified", Value: "true" },
       ],
-      MessageAction: 'SUPPRESS'
+      MessageAction: "SUPPRESS",
     };
 
     await cognitoClient.send(new AdminCreateUserCommand(createUserParams));
@@ -107,10 +119,12 @@ async function handleRegister(event, corsHeaders) {
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: email,
       Password: password,
-      Permanent: true
+      Permanent: true,
     };
 
-    await cognitoClient.send(new AdminSetUserPasswordCommand(setPasswordParams));
+    await cognitoClient.send(
+      new AdminSetUserPasswordCommand(setPasswordParams)
+    );
 
     // Save user data to DynamoDB
     const userData = {
@@ -118,61 +132,61 @@ async function handleRegister(event, corsHeaders) {
       firstName: firstName,
       lastName: lastName,
       username: `${firstName} ${lastName}`,
-      birthdate: birthday || '', // Use birthday from signup form if provided
-      profilePhoto: '', // Empty initially, can be updated in profile
+      birthdate: birthday || "", // Use birthday from signup form if provided
+      profilePhoto: "", // Empty initially, can be updated in profile
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     const putParams = {
       TableName: USERS_TABLE,
-      Item: userData
+      Item: userData,
     };
 
     await docClient.send(new PutCommand(putParams));
 
-    console.log('User registered successfully and saved to DynamoDB');
+    console.log("User registered successfully and saved to DynamoDB");
 
     return {
       statusCode: 201,
       headers: corsHeaders,
       body: JSON.stringify({
         success: true,
-        message: 'User registered successfully',
+        message: "User registered successfully",
         email: email,
-        userData: userData
-      })
+        userData: userData,
+      }),
     };
-
   } catch (error) {
-    console.error('Registration error:', error);
-    
-    if (error.name === 'UsernameExistsException') {
+    console.error("Registration error:", error);
+
+    if (error.name === "UsernameExistsException") {
       return {
         statusCode: 409,
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'User already exists'
-        })
+          error: "User already exists",
+        }),
       };
     }
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         success: false,
-        error: 'Registration failed',
-        message: error.message
-      })
+        error: "Registration failed",
+        message: error.message,
+      }),
     };
   }
 }
 
 async function handleLogin(event, corsHeaders) {
   try {
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const body =
+      typeof event.body === "string" ? JSON.parse(event.body) : event.body;
     const { email, password } = body;
 
     if (!email || !password) {
@@ -181,8 +195,8 @@ async function handleLogin(event, corsHeaders) {
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Email and password required'
-        })
+          error: "Email and password required",
+        }),
       };
     }
 
@@ -191,58 +205,60 @@ async function handleLogin(event, corsHeaders) {
     const authParams = {
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       ClientId: process.env.COGNITO_CLIENT_ID,
-      AuthFlow: 'ADMIN_NO_SRP_AUTH',
+      AuthFlow: "ADMIN_NO_SRP_AUTH",
       AuthParameters: {
         USERNAME: email,
-        PASSWORD: password
-      }
+        PASSWORD: password,
+      },
     };
 
-    const result = await cognitoClient.send(new AdminInitiateAuthCommand(authParams));
+    const result = await cognitoClient.send(
+      new AdminInitiateAuthCommand(authParams)
+    );
 
-    console.log('Login successful');
+    console.log("Login successful");
 
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
         success: true,
-        message: 'Login successful',
+        message: "Login successful",
         accessToken: result.AuthenticationResult.AccessToken,
         idToken: result.AuthenticationResult.IdToken,
-        refreshToken: result.AuthenticationResult.RefreshToken
-      })
+        refreshToken: result.AuthenticationResult.RefreshToken,
+      }),
     };
-
   } catch (error) {
-    console.error('Login error:', error);
-    
-    if (error.name === 'NotAuthorizedException') {
+    console.error("Login error:", error);
+
+    if (error.name === "NotAuthorizedException") {
       return {
         statusCode: 401,
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Invalid credentials'
-        })
+          error: "Invalid credentials",
+        }),
       };
     }
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         success: false,
-        error: 'Login failed',
-        message: error.message
-      })
+        error: "Login failed",
+        message: error.message,
+      }),
     };
   }
 }
 
 async function handleCheckAdmin(event, corsHeaders) {
   try {
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const body =
+      typeof event.body === "string" ? JSON.parse(event.body) : event.body;
     const { email } = body;
 
     if (!email) {
@@ -251,8 +267,8 @@ async function handleCheckAdmin(event, corsHeaders) {
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Email is required'
-        })
+          error: "Email is required",
+        }),
       };
     }
 
@@ -262,20 +278,27 @@ async function handleCheckAdmin(event, corsHeaders) {
       // Check if user is in admin group
       const listGroupsParams = {
         UserPoolId: process.env.COGNITO_USER_POOL_ID,
-        Username: email
+        Username: email,
       };
 
-      const result = await cognitoClient.send(new AdminListGroupsForUserCommand(listGroupsParams));
+      const result = await cognitoClient.send(
+        new AdminListGroupsForUserCommand(listGroupsParams)
+      );
       const groups = result.Groups || [];
-      
+
       // Check if user is in admin group
-      const isAdmin = groups.some(group => 
-        group.GroupName === 'admin' || 
-        group.GroupName === 'Admin' || 
-        group.GroupName === 'ADMIN'
+      const isAdmin = groups.some(
+        (group) =>
+          group.GroupName === "admin" ||
+          group.GroupName === "Admin" ||
+          group.GroupName === "ADMIN"
       );
 
-      console.log(`User ${email} admin status: ${isAdmin}, groups: ${groups.map(g => g.GroupName).join(', ')}`);
+      console.log(
+        `User ${email} admin status: ${isAdmin}, groups: ${groups
+          .map((g) => g.GroupName)
+          .join(", ")}`
+      );
 
       return {
         statusCode: 200,
@@ -283,40 +306,43 @@ async function handleCheckAdmin(event, corsHeaders) {
         body: JSON.stringify({
           success: true,
           isAdmin: isAdmin,
-          groups: groups.map(g => g.GroupName)
-        })
+          groups: groups.map((g) => g.GroupName),
+        }),
       };
-
     } catch (cognitoError) {
-      console.log(`User ${email} not found in Cognito or error checking groups:`, cognitoError.message);
-      
+      console.log(
+        `User ${email} not found in Cognito or error checking groups:`,
+        cognitoError.message
+      );
+
       // If user doesn't exist in Cognito, check if it's a hardcoded admin email
-      const adminEmails = ['admin@dogotel.com', 'admin@example.com'];
+      const adminEmails = ["admin@dogotel.com", "admin@example.com"];
       const isHardcodedAdmin = adminEmails.includes(email.toLowerCase());
-      
+
       return {
         statusCode: 200,
         headers: corsHeaders,
         body: JSON.stringify({
           success: true,
           isAdmin: isHardcodedAdmin,
-          groups: isHardcodedAdmin ? ['admin'] : [],
-          note: isHardcodedAdmin ? 'Hardcoded admin user' : 'User not found in Cognito'
-        })
+          groups: isHardcodedAdmin ? ["admin"] : [],
+          note: isHardcodedAdmin
+            ? "Hardcoded admin user"
+            : "User not found in Cognito",
+        }),
       };
     }
-
   } catch (error) {
-    console.error('Admin check error:', error);
-    
+    console.error("Admin check error:", error);
+
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         success: false,
-        error: 'Failed to check admin status',
-        message: error.message
-      })
+        error: "Failed to check admin status",
+        message: error.message,
+      }),
     };
   }
 }
