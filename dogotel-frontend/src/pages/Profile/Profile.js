@@ -756,7 +756,7 @@ function Profile() {
                         if (!subscribingDaily)
                           e.target.style.backgroundColor = "#bb7c48";
                       }}
-                      title="Subscribe to receive notifications when a customer places an order."
+                      title="Subscribe to receive notifications of which rooms are available for the day."
                     >
                       {subscribingDaily
                         ? "Subscribing..."
