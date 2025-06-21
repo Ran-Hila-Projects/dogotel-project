@@ -321,6 +321,30 @@ function Admin({ userName, userEmail, isAdmin }) {
     }
   };
 
+  const handleTestNotification = async () => {
+    try {
+      const response = await fetch(CONFIG.API_URL + "notifications/test-admin", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer admin-token'
+        },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('✅ Test notification sent successfully! Check your email if you\'re subscribed.');
+      } else {
+        const errorData = await response.json();
+        alert(`❌ Failed to send test notification: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      alert('❌ Error sending test notification. Please try again.');
+    }
+  };
+
   // Check admin status on component mount
   useEffect(() => {
     async function verifyAdminStatus() {
@@ -622,6 +646,20 @@ function Admin({ userName, userEmail, isAdmin }) {
                   {subscribing ? "Subscribing..." : "📧 Subscribe to Booking Notifications"}
                 </button>
               )}
+              <button
+                onClick={handleTestNotification}
+                style={{
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "14px"
+                }}
+              >
+                🧪 Test Notifications
+              </button>
             </div>
           </div>
           <table className="admin-bookings-table">
