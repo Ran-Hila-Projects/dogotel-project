@@ -233,6 +233,7 @@
         "GlobalSecondaryIndexes": [
           {
             "IndexName": "UserEmailIndex",
+<<<<<<< HEAD
             "KeySchema": [
               {
                 "AttributeName": "userEmail",
@@ -246,6 +247,10 @@
               "ReadCapacityUnits": 1,
               "WriteCapacityUnits": 1
             }
+=======
+            "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
+            "Projection": { "ProjectionType": "ALL" }
+>>>>>>> d4f8f64b20ab9004f205207d9b1e221994a6d496
           }
         ],
         "ProvisionedThroughput": {
