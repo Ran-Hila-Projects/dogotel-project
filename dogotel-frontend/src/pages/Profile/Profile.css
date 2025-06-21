@@ -1,121 +1,416 @@
 .profile-page {
   padding: 20px;
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   padding-top: 18vh;
 }
 
-.user-info-profile {
+.profile-content {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  padding: 20px 20px;
-  border-radius: 30px;
-  border: var(--font-brown-dark) 1px solid;
-  padding-right: 13px;
+  flex-direction: column;
+  gap: 30px;
 }
-.user-info-profile p {
-  margin-bottom: 0;
+
+/* User Profile Section */
+.user-profile-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(60, 31, 16, 0.08);
+  border: 1px solid #e5d8c7;
+}
+
+.user-profile-card {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.user-photo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  min-width: 200px;
 }
 
 .user-photo {
   width: 150px;
   height: 170px;
   border-radius: 22px;
-  margin-right: 20px;
+  object-fit: cover;
+  border: 3px solid #e5d8c7;
+  box-shadow: 0 4px 12px rgba(60, 31, 16, 0.1);
 }
 
 .user-details {
+  flex: 1;
+}
+
+.user-details h2 {
+  color: #3b1d0f;
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
+
+.user-info-grid {
+  display: grid;
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f8f2eb;
+  border-radius: 10px;
+  border: 1px solid #e5d8c7;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #3b1d0f;
+  min-width: 80px;
+}
+
+.info-item span {
+  color: #3b1d0f;
+  flex: 1;
+}
+
+.admin-badge {
+  background: #fff3f3;
+  border-color: #ffcdd2;
+}
+
+/* Dog Management Section */
+.dog-management-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(60, 31, 16, 0.08);
+  border: 1px solid #e5d8c7;
+}
+
+.dog-management-section h2 {
+  color: #3b1d0f;
+  margin-bottom: 10px;
+  font-size: 1.5em;
+}
+
+.section-description {
+  color: #666;
+  margin-bottom: 25px;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.dog-form-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 25px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f8f2eb;
+  border-radius: 15px;
+  border: 1px solid #e5d8c7;
+}
+
+.dog-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.dog-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.dog-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #3b1d0f;
+  font-weight: 500;
+}
+
+.breed-detection-status {
+  color: #3498db;
+  font-size: 0.9em;
+  padding: 8px 12px;
+  background: #ebf8ff;
+  border-radius: 6px;
+  border: 1px solid #bee3f8;
+}
+
+.breed-detected {
+  color: #27ae60;
+  font-size: 0.9em;
+  padding: 8px 12px;
+  background: #f0fff4;
+  border-radius: 6px;
+  border: 1px solid #c6f6d5;
+}
+
+.my-dogs-list h3 {
+  color: #3b1d0f;
+  margin: 25px 0 15px 0;
   font-size: 1.2em;
+}
+
+.my-dogs-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.dog-card {
+  background: #f8f2eb;
+  border-radius: 15px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(60, 31, 16, 0.06);
+  border: 1px solid #e5d8c7;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dog-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(60, 31, 16, 0.1);
+}
+
+.dog-info {
+  text-align: center;
+  width: 100%;
+}
+
+.dog-name {
+  font-weight: 600;
+  color: #3b1d0f;
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.dog-breed {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 3px;
+}
+
+.dog-age {
+  color: #888;
+  font-size: 0.85em;
+}
+
+/* Notifications Section */
+.notifications-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(60, 31, 16, 0.08);
+  border: 1px solid #e5d8c7;
+}
+
+.notification-card {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+.notification-header h2 {
+  color: #3b1d0f;
+  margin-bottom: 8px;
+  font-size: 1.5em;
+}
+
+.notification-description {
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.notification-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.subscription-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f0fff4;
+  border-radius: 12px;
+  border: 1px solid #c6f6d5;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-icon {
+  font-size: 1.2em;
+}
+
+.status-text {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.subscription-action {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  background: #f8f2eb;
+  border-radius: 12px;
+  border: 1px solid #e5d8c7;
+}
+
+/* Booking History Section */
+.booking-history-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(60, 31, 16, 0.08);
+  border: 1px solid #e5d8c7;
+}
+
+.booking-history-title {
+  color: #3b1d0f;
+  margin-bottom: 25px;
+  font-size: 1.5em;
+}
+
+.loading-message {
+  text-align: center;
+  color: #666;
+  padding: 40px;
+  font-size: 1.1em;
+}
+
+.error-message {
+  color: #e74c3c;
+  background: #fdf2f2;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  margin-bottom: 20px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.empty-state p {
+  margin-bottom: 10px;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e5d8c7;
+}
+
 .booking-history-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  background: #fff;
 }
 
 .booking-history-table th,
 .booking-history-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
+  padding: 12px 16px;
   text-align: left;
+  border-bottom: 1px solid #e5d8c7;
 }
 
 .booking-history-table th {
-  background-color: #f2f2f2;
-}
-
-.booking-history-title {
-  font-size: 1.5em;
-  margin-top: 40px;
-}
-
-.dog-management-section {
-  margin: 40px 0 30px 0;
-  background: #fff;
-  border-radius: 20px;
-  padding: 24px 24px 18px 24px;
-  border: 1px solid var(--font-brown-dark);
-}
-.dog-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0px 30px;
-  align-items: flex-end;
-  margin-bottom: 18px;
-}
-.dog-form label {
-  display: block;
-  margin-bottom: 8px;
+  background: #f8f2eb;
   color: #3b1d0f;
-  font-weight: 500;
-  gap: 4px;
-  display: flex;
-  flex-direction: column;
-}
-.dog-form input[type="file"] {
-  margin-top: 4px;
-}
-.dog-form-error {
-  color: #e74c3c;
-  font-size: 0.95em;
-  margin-top: 6px;
-}
-.dog-preview {
-  border: 1px solid #e5d8c7;
-  margin-right: 10px;
-}
-.my-dogs-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  margin-top: 10px;
-}
-.dog-card {
-  background: #f8f6f3;
-  border-radius: 12px;
-  border: 1px solid #e5d8c7;
-  padding: 12px 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 120px;
-  max-width: 160px;
-  gap: 6px;
-  box-shadow: 0 2px 8px rgba(60, 31, 16, 0.06);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
 }
 
+.booking-history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.booking-history-table tr:hover {
+  background: #f8f2eb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 15px;
+    padding-top: 15vh;
+  }
+
+  .user-profile-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .dog-form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .my-dogs-list {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .subscription-status {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .info-item label {
+    min-width: auto;
+  }
+}
+
+/* Missing CSS Classes */
 .profile-tabs {
   display: flex;
   gap: 16px;
   margin-bottom: 32px;
   justify-content: flex-start;
 }
+
 .profile-tabs button {
   background: none;
   border: none;
@@ -128,18 +423,13 @@
   border-bottom: 2px solid transparent;
   transition: background 0.2s, color 0.2s, border-bottom 0.2s;
 }
+
 .profile-tabs button.active {
   background: #fff;
   color: #bb7c48;
   border-bottom: 2px solid #bb7c48;
 }
 
-.dog-form-btn-row {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
 .profile-input {
   width: 100%;
   padding: 10px 14px;
@@ -151,11 +441,13 @@
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
 }
+
 .profile-input:focus {
   border: 1.5px solid #bb7c48;
   box-shadow: 0 0 0 2px #f3e3d1;
   background: #fff;
 }
+
 .profile-input:hover {
   border: 1.5px solid #bb7c48;
 }
@@ -174,6 +466,7 @@
   transition: background 0.2s, color 0.2s;
   text-align: center;
 }
+
 .profile-photo-upload-btn:hover {
   background: #3b1d0f;
   color: #fff;
@@ -184,10 +477,33 @@
   font-size: 0.95em;
   margin-top: 6px;
 }
+
 .profile-photo-error {
   color: #e74c3c;
   font-size: 0.95em;
   margin-top: 6px;
+}
+
+.dog-form {
+  margin-bottom: 20px;
+}
+
+.dog-form-error {
+  color: #e74c3c;
+  font-size: 0.95em;
+  margin-top: 6px;
+}
+
+.dog-preview {
+  border: 1px solid #e5d8c7;
+  margin-right: 10px;
+}
+
+.dog-form-btn-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .save-dog-btn {
@@ -201,10 +517,12 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
+
 .save-dog-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
+
 .save-dog-btn:hover:not(:disabled) {
   background: #bb7c48;
   color: #fff;
@@ -222,6 +540,7 @@
   margin-top: 12px;
   transition: background 0.2s, color 0.2s;
 }
+
 .add-another-dog-btn:hover {
   background: #3b1d0f;
   color: #fff;

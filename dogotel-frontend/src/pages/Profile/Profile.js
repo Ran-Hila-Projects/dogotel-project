@@ -144,13 +144,14 @@ function Profile() {
         // Fetch user's dogs and save to localStorage
         try {
           const dogsRes = await fetch(
-            CONFIG.API_URL + `api/user/dogs?userEmail=${encodeURIComponent(decodedEmail)}`
+            CONFIG.API_URL +
+              `api/user/dogs?userEmail=${encodeURIComponent(decodedEmail)}`
           );
           if (dogsRes.ok) {
             const dogsData = await dogsRes.json();
             if (dogsData.success && Array.isArray(dogsData.dogs)) {
               setDogs(dogsData.dogs);
-              localStorage.setItem('userDogs', JSON.stringify(dogsData.dogs));
+              localStorage.setItem("userDogs", JSON.stringify(dogsData.dogs));
             }
           }
         } catch (dogsErr) {
@@ -356,13 +357,13 @@ function Profile() {
           breed: dogForm.breed,
           photo: data.dog.photo, // This is now base64 data instead of S3 URL
         };
-        
+
         setDogs((prev) => [...prev, newDog]);
-        
+
         // Save to localStorage for use in BookingPopup
         const updatedDogsForStorage = [...dogs, newDog];
-        localStorage.setItem('userDogs', JSON.stringify(updatedDogsForStorage));
-        
+        localStorage.setItem("userDogs", JSON.stringify(updatedDogsForStorage));
+
         setDogForms((forms) => forms.filter((_, i) => i !== idx));
         if (dogForms.length === 1) setDogForms([{ ...emptyDogForm }]);
       } else {
@@ -381,24 +382,31 @@ function Profile() {
   const handleSubscribeToDailyRooms = async () => {
     setSubscribingDaily(true);
     try {
-      const response = await fetch(CONFIG.API_URL + "notifications/daily-rooms/subscribe", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: userData.email })
-      });
+      const response = await fetch(
+        CONFIG.API_URL + "notifications/daily-rooms/subscribe",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: userData.email }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
         setDailyRoomsSubscribed(true);
-        alert('✅ Successfully subscribed to daily room availability notifications! You will receive emails at 8 AM UTC daily.');
+        alert(
+          "✅ Successfully subscribed to daily room availability notifications! You will receive emails at 8 AM UTC daily."
+        );
       } else {
-        alert('❌ Failed to subscribe to daily notifications. Please try again.');
+        alert(
+          "❌ Failed to subscribe to daily notifications. Please try again."
+        );
       }
     } catch (error) {
-      console.error('Error subscribing to daily room notifications:', error);
-      alert('❌ Error subscribing to daily notifications. Please try again.');
+      console.error("Error subscribing to daily room notifications:", error);
+      alert("❌ Error subscribing to daily notifications. Please try again.");
     } finally {
       setSubscribingDaily(false);
     }
@@ -407,24 +415,30 @@ function Profile() {
   const handleUnsubscribeFromDailyRooms = async () => {
     setSubscribingDaily(true);
     try {
-      const response = await fetch(CONFIG.API_URL + "notifications/daily-rooms/unsubscribe", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: userData.email })
-      });
+      const response = await fetch(
+        CONFIG.API_URL + "notifications/daily-rooms/unsubscribe",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: userData.email }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
         setDailyRoomsSubscribed(false);
-        alert('✅ Successfully unsubscribed from daily room notifications.');
+        alert("✅ Successfully unsubscribed from daily room notifications.");
       } else {
-        alert('❌ Failed to unsubscribe. Please try again.');
+        alert("❌ Failed to unsubscribe. Please try again.");
       }
     } catch (error) {
-      console.error('Error unsubscribing from daily room notifications:', error);
-      alert('❌ Error unsubscribing. Please try again.');
+      console.error(
+        "Error unsubscribing from daily room notifications:",
+        error
+      );
+      alert("❌ Error unsubscribing. Please try again.");
     } finally {
       setSubscribingDaily(false);
     }
@@ -463,305 +477,361 @@ function Profile() {
           Booking History
         </button>
       </div>
+
       {activeTab === "profile" && (
-        <>
-          <div className="user-info-profile">
-            <div style={{ position: "relative" }}>
-              <img
-                src={profilePhoto}
-                alt={userData.username}
-                className="user-photo"
-              />
-              <label className="profile-photo-upload-btn">
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handleProfilePhotoChange}
-                  disabled={profileUploading}
+        <div className="profile-content">
+          {/* User Profile Section */}
+          <section className="user-profile-section">
+            <div className="user-profile-card">
+              <div className="user-photo-container">
+                <img
+                  src={profilePhoto}
+                  alt={userData.username}
+                  className="user-photo"
                 />
-                <span>Change Photo</span>
-              </label>
-              {profileUploading && (
-                <div className="profile-photo-uploading">Uploading...</div>
-              )}
-              {profileError && (
-                <div className="profile-photo-error">{profileError}</div>
-              )}
+                <label className="profile-photo-upload-btn">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleProfilePhotoChange}
+                    disabled={profileUploading}
+                  />
+                  <span>Change Photo</span>
+                </label>
+                {profileUploading && (
+                  <div className="profile-photo-uploading">Uploading...</div>
+                )}
+                {profileError && (
+                  <div className="profile-photo-error">{profileError}</div>
+                )}
+              </div>
+              <div className="user-details">
+                <h2>Personal Information</h2>
+                <div className="user-info-grid">
+                  <div className="info-item">
+                    <label>Name:</label>
+                    <span>
+                      {userData.firstName} {userData.lastName}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <label>Birthdate:</label>
+                    <span>{userData.birthdate}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>Email:</label>
+                    <span>{userData.email}</span>
+                  </div>
+                  {userData.isAdmin && (
+                    <div className="info-item admin-badge">
+                      <label>Role:</label>
+                      <span style={{ color: "#e74c3c", fontWeight: "bold" }}>
+                        Administrator
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="user-details">
-              <p>
-                <strong>Name:</strong> {userData.firstName} {userData.lastName}
-              </p>
-              <p>
-                <strong>Birthdate:</strong> {userData.birthdate}
-              </p>
-              <p>
-                <strong>Email:</strong> {userData.email}
-              </p>
-              {userData.isAdmin && (
-                <p style={{ color: "#e74c3c", fontWeight: "bold" }}>
-                  <strong>Role:</strong> Administrator
-                </p>
-              )}
-            </div>
-          </div>
+          </section>
+
           {/* Dog Management Section */}
           <section className="dog-management-section">
-            <h2>My Dogs</h2>
+            <h2>🐕 My Dogs</h2>
+            <p className="section-description">
+              Add your furry friends to make booking easier and get personalized
+              recommendations.
+            </p>
+
             {dogForms.map((dogForm, idx) => (
               <form
                 className="dog-form"
                 key={idx}
                 onSubmit={(e) => handleDogSave(e, idx)}
               >
-                <label>
-                  Dog Photo:
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleDogPhotoChange(e, idx)}
-                    className="profile-input"
-                  />
-                </label>
-                {dogForm.photo && (
-                  <img
-                    src={dogForm.photo}
-                    alt="Dog"
-                    className="dog-preview"
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 10,
-                      objectFit: "cover",
-                      margin: "10px 0",
-                    }}
-                  />
-                )}
-                <label>
-                  Name:
-                  <input
-                    name="name"
-                    value={dogForm.name}
-                    onChange={(e) => handleDogFormChange(e, idx)}
-                    required
-                    className="profile-input"
-                  />
-                </label>
-                <label>
-                  Age:
-                  <input
-                    name="age"
-                    value={dogForm.age}
-                    onChange={(e) => handleDogFormChange(e, idx)}
-                    type="number"
-                    min="0"
-                    required
-                    className="profile-input"
-                  />
-                </label>
-                <label>
-                  Breed:
-                  <input
-                    name="breed"
-                    value={dogForm.breed}
-                    onChange={(e) => handleDogFormChange(e, idx)}
-                    required
-                    className="profile-input"
-                    placeholder={
-                      dogForm.uploading
-                        ? "Analyzing image..."
-                        : "Enter breed or upload photo"
-                    }
-                  />
-                </label>
-                {dogForm.uploading && (
-                  <div
-                    style={{
-                      color: "#3498db",
-                      fontSize: "14px",
-                      margin: "5px 0",
-                    }}
-                  >
-                    🔍 Identifying breed...
+                <div className="dog-form-grid">
+                  <div className="dog-photo-section">
+                    <label>
+                      Dog Photo:
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleDogPhotoChange(e, idx)}
+                        className="profile-input"
+                      />
+                    </label>
+                    {dogForm.photo && (
+                      <img
+                        src={dogForm.photo}
+                        alt="Dog"
+                        className="dog-preview"
+                        style={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: 12,
+                          objectFit: "cover",
+                          margin: "10px 0",
+                          border: "2px solid #e5d8c7",
+                        }}
+                      />
+                    )}
                   </div>
-                )}
-                {dogForm.breedDetected && (
-                  <div
-                    style={{
-                      color: "#27ae60",
-                      fontSize: "14px",
-                      margin: "5px 0",
-                    }}
-                  >
-                    {dogForm.breedDetected}
+
+                  <div className="dog-details-section">
+                    <div className="form-row">
+                      <label>
+                        Name:
+                        <input
+                          name="name"
+                          value={dogForm.name}
+                          onChange={(e) => handleDogFormChange(e, idx)}
+                          required
+                          className="profile-input"
+                          placeholder="Enter dog's name"
+                        />
+                      </label>
+                      <label>
+                        Age:
+                        <input
+                          name="age"
+                          value={dogForm.age}
+                          onChange={(e) => handleDogFormChange(e, idx)}
+                          type="number"
+                          min="0"
+                          required
+                          className="profile-input"
+                          placeholder="Age in years"
+                        />
+                      </label>
+                    </div>
+
+                    <label>
+                      Breed:
+                      <input
+                        name="breed"
+                        value={dogForm.breed}
+                        onChange={(e) => handleDogFormChange(e, idx)}
+                        required
+                        className="profile-input"
+                        placeholder={
+                          dogForm.uploading
+                            ? "Analyzing image..."
+                            : "Enter breed or upload photo for auto-detection"
+                        }
+                      />
+                    </label>
+
+                    {dogForm.uploading && (
+                      <div className="breed-detection-status">
+                        🔍 Identifying breed...
+                      </div>
+                    )}
+                    {dogForm.breedDetected && (
+                      <div className="breed-detected">
+                        {dogForm.breedDetected}
+                      </div>
+                    )}
+                    {dogForm.error && (
+                      <div className="dog-form-error">{dogForm.error}</div>
+                    )}
+
+                    <div className="dog-form-btn-row">
+                      <button
+                        type="submit"
+                        className="save-dog-btn"
+                        disabled={dogForm.uploading}
+                      >
+                        Save Dog
+                      </button>
+                    </div>
                   </div>
-                )}
-                {dogForm.error && (
-                  <div
-                    className="dog-form-error"
-                    style={{
-                      color: "#e74c3c",
-                      fontSize: "14px",
-                      margin: "5px 0",
-                    }}
-                  >
-                    {dogForm.error}
-                  </div>
-                )}
-                <div className="dog-form-btn-row">
-                  <button
-                    type="submit"
-                    className="save-dog-btn"
-                    disabled={dogForm.uploading}
-                  >
-                    Save Dog
-                  </button>
                 </div>
               </form>
             ))}
+
             <button
               className="add-another-dog-btn"
               onClick={handleAddAnotherDog}
             >
-              Add Another Dog
+              + Add Another Dog
             </button>
-            <div className="my-dogs-list">
-              {dogs.map((dog, idx) => (
-                <div key={idx} className="dog-card">
-                  <img
-                    src={dog.photo}
-                    alt={dog.name}
-                    className="dog-preview"
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 10,
-                      objectFit: "cover",
-                    }}
-                  />
-                  <div>
-                    <strong>Name:</strong> {dog.name}
+
+            {dogs.length > 0 && (
+              <div className="my-dogs-list">
+                <h3>Your Dogs</h3>
+                {dogs.map((dog, idx) => (
+                  <div key={idx} className="dog-card">
+                    <img
+                      src={dog.photo}
+                      alt={dog.name}
+                      className="dog-preview"
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 10,
+                        objectFit: "cover",
+                      }}
+                    />
+                    <div className="dog-info">
+                      <div className="dog-name">{dog.name}</div>
+                      <div className="dog-breed">{dog.breed}</div>
+                      <div className="dog-age">{dog.age} years old</div>
+                    </div>
                   </div>
-                  <div>
-                    <strong>Breed:</strong> {dog.breed}
-                  </div>
-                  <div>
-                    <strong>Age:</strong> {dog.age}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-          
-          {/* Daily Room Notifications Section */}
-          <section className="notifications-section" style={{ marginTop: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
-            <h2>📧 Daily Room Notifications</h2>
-            <p style={{ color: '#666', marginBottom: '15px' }}>
-              Get notified every morning at 8 AM UTC about available rooms for the day.
-            </p>
-            {dailyRoomsSubscribed ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <span style={{ color: '#28a745', fontWeight: 'bold' }}>✅ You're subscribed to daily room notifications</span>
-                <button
-                  onClick={handleUnsubscribeFromDailyRooms}
-                  disabled={subscribingDaily}
-                  style={{
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: subscribingDaily ? 'not-allowed' : 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  {subscribingDaily ? 'Processing...' : 'Unsubscribe'}
-                </button>
+                ))}
               </div>
-            ) : (
-              <button
-                onClick={handleSubscribeToDailyRooms}
-                disabled={subscribingDaily}
-                style={{
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '4px',
-                  cursor: subscribingDaily ? 'not-allowed' : 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {subscribingDaily ? 'Subscribing...' : '📧 Subscribe to Daily Room Updates'}
-              </button>
             )}
           </section>
-        </>
+
+          {/* Daily Room Notifications Section */}
+          <section className="notifications-section">
+            <div className="notification-card">
+              <div className="notification-header">
+                <h2>📧 Daily Room Notifications</h2>
+                <p className="notification-description">
+                  Get notified every morning at 8 AM UTC about available rooms
+                  for the day.
+                </p>
+              </div>
+
+              <div className="notification-content">
+                {dailyRoomsSubscribed ? (
+                  <div className="subscription-status">
+                    <div className="status-indicator">
+                      <span className="status-icon">✅</span>
+                      <span className="status-text">
+                        You're subscribed to daily room notifications
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleUnsubscribeFromDailyRooms}
+                      disabled={subscribingDaily}
+                      className="unsubscribe-btn"
+                      style={{
+                        backgroundColor: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "10px 20px",
+                        fontSize: "0.9em",
+                        fontWeight: "600",
+                        cursor: subscribingDaily ? "not-allowed" : "pointer",
+                        transition: "background 0.2s, color 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!subscribingDaily)
+                          e.target.style.backgroundColor = "#c82333";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!subscribingDaily)
+                          e.target.style.backgroundColor = "#dc3545";
+                      }}
+                    >
+                      {subscribingDaily ? "Processing..." : "Unsubscribe"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="subscription-action">
+                    <button
+                      onClick={handleSubscribeToDailyRooms}
+                      disabled={subscribingDaily}
+                      className="subscribe-btn"
+                      style={{
+                        backgroundColor: "#bb7c48",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "12px 24px",
+                        fontSize: "1em",
+                        fontWeight: "600",
+                        cursor: subscribingDaily ? "not-allowed" : "pointer",
+                        transition: "background 0.2s, color 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!subscribingDaily)
+                          e.target.style.backgroundColor = "#3b1d0f";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!subscribingDaily)
+                          e.target.style.backgroundColor = "#bb7c48";
+                      }}
+                      title="Subscribe to receive notifications when a customer places an order."
+                    >
+                      {subscribingDaily
+                        ? "Subscribing..."
+                        : "📧 Subscribe to Daily Room Updates"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
       )}
+
       {activeTab === "history" && (
-        <>
+        <div className="booking-history-section">
           <h2 className="booking-history-title">Booking History</h2>
-          {bookingLoading && <div>Loading booking history...</div>}
-          {bookingError && (
-            <div style={{ color: "#e74c3c" }}>{bookingError}</div>
+          {bookingLoading && (
+            <div className="loading-message">Loading booking history...</div>
           )}
+          {bookingError && <div className="error-message">{bookingError}</div>}
           {bookingHistory.length === 0 && !bookingLoading && !bookingError && (
-            <div
-              style={{ textAlign: "center", padding: "20px", color: "#666" }}
-            >
+            <div className="empty-state">
               <p>No booking history found.</p>
               <p>Your future bookings will appear here.</p>
             </div>
           )}
           {bookingHistory.length > 0 && (
-            <table className="booking-history-table">
-              <thead>
-                <tr>
-                  <th>Room</th>
-                  <th>Booking Number</th>
-                  <th>Dates</th>
-                  <th>Dogs</th>
-                  <th>Dining Selection</th>
-                  <th>Services Selection</th>
-                  <th>Total Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookingHistory.map((booking, idx) => (
-                  <tr key={booking.bookingId || idx}>
-                    <td>{booking.room?.roomTitle || "-"}</td>
-                    <td>{booking.bookingId || "-"}</td>
-                    <td>
-                      {booking.createdAt && booking.room?.endDate
-                        ? `${new Date(
-                            booking.createdAt
-                          ).toLocaleDateString()} to ${new Date(
-                            booking.room.endDate
-                          ).toLocaleDateString()}`
-                        : "-"}
-                    </td>
-                    <td>
-                      {Array.isArray(booking.room?.dogs)
-                        ? booking.room.dogs.map((d) => d.name).join(", ")
-                        : "-"}
-                    </td>
-                    <td>{booking.dining?.title || "-"}</td>
-                    <td>
-                      {Array.isArray(booking.services)
-                        ? booking.services
-                            .map((s) => s.title || s.name)
-                            .join(", ")
-                        : "-"}
-                    </td>
-                    <td>${booking.totalPrice || "0"}</td>
+            <div className="table-container">
+              <table className="booking-history-table">
+                <thead>
+                  <tr>
+                    <th>Room</th>
+                    <th>Booking Number</th>
+                    <th>Dates</th>
+                    <th>Dogs</th>
+                    <th>Dining Selection</th>
+                    <th>Services Selection</th>
+                    <th>Total Price</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {bookingHistory.map((booking, idx) => (
+                    <tr key={booking.bookingId || idx}>
+                      <td>{booking.room?.roomTitle || "-"}</td>
+                      <td>{booking.bookingId || "-"}</td>
+                      <td>
+                        {booking.createdAt && booking.room?.endDate
+                          ? `${new Date(
+                              booking.createdAt
+                            ).toLocaleDateString()} to ${new Date(
+                              booking.room.endDate
+                            ).toLocaleDateString()}`
+                          : "-"}
+                      </td>
+                      <td>
+                        {Array.isArray(booking.room?.dogs)
+                          ? booking.room.dogs.map((d) => d.name).join(", ")
+                          : "-"}
+                      </td>
+                      <td>{booking.dining?.title || "-"}</td>
+                      <td>
+                        {Array.isArray(booking.services)
+                          ? booking.services
+                              .map((s) => s.title || s.name)
+                              .join(", ")
+                          : "-"}
+                      </td>
+                      <td>${booking.totalPrice || "0"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

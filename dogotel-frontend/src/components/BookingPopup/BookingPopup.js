@@ -71,13 +71,13 @@ function BookingPopup({
   useEffect(() => {
     if (open) {
       try {
-        const storedDogs = localStorage.getItem('userDogs');
+        const storedDogs = localStorage.getItem("userDogs");
         if (storedDogs) {
           const parsedDogs = JSON.parse(storedDogs);
           setSavedDogs(parsedDogs);
         }
       } catch (error) {
-        console.error('Error loading saved dogs:', error);
+        console.error("Error loading saved dogs:", error);
       }
     }
   }, [open]);
@@ -190,7 +190,7 @@ function BookingPopup({
     }
     setError("");
     setShowFieldErrors(false);
-    
+
     // Find room details for pricing
     let pricePerNight = 0;
     if (rooms && rooms.length > 0 && roomId) {
@@ -199,16 +199,16 @@ function BookingPopup({
         pricePerNight = foundRoom.price || foundRoom.pricePerNight || 0;
       }
     }
-    
+
     const bookingDetails = {
       roomId: roomId, // Backend expects roomId
       startDate,
       endDate,
       dogs,
       roomTitle,
-      pricePerNight: pricePerNight
+      pricePerNight: pricePerNight,
     };
-    
+
     // Save to localStorage (merge with existing cart if present)
     let cart = {};
     try {
@@ -266,7 +266,7 @@ function BookingPopup({
           {dogs.map((dog, i) => (
             <div key={i} className="dog-fields">
               <h4>Dog {i + 1}</h4>
-              
+
               {/* Saved Dogs Selection */}
               {savedDogs.length > 0 && (
                 <div className="saved-dogs-section">
@@ -284,10 +284,10 @@ function BookingPopup({
                             src={savedDog.photo}
                             alt={savedDog.name}
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              width: "25px",
+                              height: "25px",
                               borderRadius: "50%",
-                              objectFit: "cover"
+                              objectFit: "cover",
                             }}
                           />
                         )}
