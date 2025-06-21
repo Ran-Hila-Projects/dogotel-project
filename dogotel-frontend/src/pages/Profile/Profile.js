@@ -609,48 +609,32 @@ function Profile() {
               </thead>
               <tbody>
                 {bookingHistory.map((booking, idx) => (
-                  <tr key={booking.bookingNumber || booking.bookingId || idx}>
+                  <tr key={booking.bookingId || idx}>
+                    <td>{booking.room?.roomTitle || "-"}</td>
+                    <td>{booking.bookingId || "-"}</td>
                     <td>
-                      {booking.roomName ||
-                        booking.roomTitle ||
-                        booking.room ||
-                        "-"}
-                    </td>
-                    <td>
-                      {booking.bookingNumber ||
-                        booking.bookingId ||
-                        booking.id ||
-                        booking._id ||
-                        "-"}
-                    </td>
-                    <td>
-                      {booking.dates
-                        ? booking.dates
-                        : booking.startDate && booking.endDate
-                        ? `${booking.startDate} to ${booking.endDate}`
+                      {booking.createdAt && booking.room?.endDate
+                        ? `${new Date(
+                            booking.createdAt
+                          ).toLocaleDateString()} to ${new Date(
+                            booking.room.endDate
+                          ).toLocaleDateString()}`
                         : "-"}
                     </td>
                     <td>
-                      {Array.isArray(booking.dogs)
-                        ? booking.dogs
-                            .map((d) => (typeof d === "string" ? d : d.name))
+                      {Array.isArray(booking.room?.dogs)
+                        ? booking.room.dogs.map((d) => d.name).join(", ")
+                        : "-"}
+                    </td>
+                    <td>{booking.dining?.title || "-"}</td>
+                    <td>
+                      {Array.isArray(booking.services)
+                        ? booking.services
+                            .map((s) => s.title || s.name)
                             .join(", ")
-                        : booking.dogs || "-"}
+                        : "-"}
                     </td>
-                    <td>{booking.diningSelection || booking.dining || "-"}</td>
-                    <td>
-                      {booking.servicesSelection ||
-                        (Array.isArray(booking.services)
-                          ? booking.services.map((s) => s.name || s).join(", ")
-                          : booking.services || "-")}
-                    </td>
-                    <td>
-                      $
-                      {booking.totalPrice ||
-                        booking.price ||
-                        booking.total ||
-                        "0"}
-                    </td>
+                    <td>${booking.totalPrice || "0"}</td>
                   </tr>
                 ))}
               </tbody>
