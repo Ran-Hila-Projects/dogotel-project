@@ -44,13 +44,16 @@ function Signup({ setIsLoggedIn, setUserName }) {
         if (loginData.refreshToken)
           localStorage.setItem("refresh_token", loginData.refreshToken);
         localStorage.setItem("userName", loginData.userName || email);
-        
+
         // Store current user info for profile access
-        localStorage.setItem("currentUser", JSON.stringify({
-          email: email,
-          userName: loginData.userName || email
-        }));
-        
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify({
+            email: email,
+            userName: loginData.userName || email,
+          })
+        );
+
         setIsLoggedIn(true);
         setUserName(loginData.userName || email);
         // Redirect to home page
@@ -106,10 +109,28 @@ function Signup({ setIsLoggedIn, setUserName }) {
       setSuccess(true);
       // Auto-login after successful signup
       await attemptAutoLogin(email, password);
+      await fetchAndSaveDogs(email);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAndSaveDogs = async (email) => {
+    try {
+      const res = await fetch(`${CONFIG.API_URL}/api/user/dogs/${email}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.dogs) {
+          localStorage.setItem("userDogs", JSON.stringify(data.dogs));
+        } else {
+          localStorage.setItem("userDogs", JSON.stringify([]));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch user dogs:", error);
+      localStorage.setItem("userDogs", JSON.stringify([]));
     }
   };
 

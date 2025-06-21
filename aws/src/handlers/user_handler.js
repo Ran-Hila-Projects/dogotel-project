@@ -4,6 +4,7 @@ const {
   GetCommand,
   PutCommand,
   UpdateCommand,
+  QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   CognitoIdentityProviderClient,
@@ -26,6 +27,7 @@ const cognitoClient = new CognitoIdentityProviderClient({
 // Environment variables
 const USERS_TABLE = process.env.USERS_TABLE || "DogotelUsers";
 const USER_POOL_ID = process.env.USER_POOL_ID;
+const DOGS_TABLE = process.env.DOGS_TABLE || "DogotelDogs";
 
 exports.handler = async (event, context) => {
   console.log("Event:", JSON.stringify(event, null, 2));
@@ -52,6 +54,11 @@ exports.handler = async (event, context) => {
     } else if (path === "/user/profile" && httpMethod === "PUT") {
       // Handle PUT /user/profile for updating user profile
       return await handleUpdateUserProfile(event);
+    } else if (path === "/api/user/dogs" && httpMethod === "POST") {
+      return await handleAddDog(event);
+    } else if (path.startsWith("/api/user/dogs/") && httpMethod === "GET") {
+      const email = path.split("/api/user/dogs/")[1];
+      return await handleGetDogs(event, email);
     } else {
       return corsErrorResponse(404, "Endpoint not found", origin);
     }
@@ -205,7 +212,7 @@ async function handleUpdateProfilePhoto(event) {
       origin
     );
   } catch (error) {
-    console.error("Update profile photo error:", error);
+    console.error("Error updating profile photo:", error);
     return corsErrorResponse(
       500,
       "Internal server error",
@@ -279,5 +286,65 @@ async function handleUpdateUserProfile(event) {
       "Internal server error",
       extractOriginFromEvent(event)
     );
+  }
+}
+
+async function handleAddDog(event) {
+  const origin = extractOriginFromEvent(event);
+  try {
+    const body = JSON.parse(event.body);
+    const { userEmail, name, age, breed, photo } = body;
+
+    if (!userEmail || !name || !age || !breed || !photo) {
+      return corsErrorResponse(400, "Missing required dog information", origin);
+    }
+
+    const dogId = require("crypto").randomUUID();
+
+    await docClient.send(
+      new PutCommand({
+        TableName: DOGS_TABLE,
+        Item: {
+          dogId,
+          userEmail,
+          name,
+          age,
+          breed,
+          photo,
+          createdAt: new Date().toISOString(),
+        },
+      })
+    );
+
+    return corsResponse(201, { success: true, dogId }, origin);
+  } catch (error) {
+    console.error("Error adding dog:", error);
+    return corsErrorResponse(500, "Failed to add dog", origin);
+  }
+}
+
+async function handleGetDogs(event, email) {
+  const origin = extractOriginFromEvent(event);
+  try {
+    const decodedEmail = decodeURIComponent(email);
+    if (!decodedEmail) {
+      return corsErrorResponse(400, "User email is required", origin);
+    }
+
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: DOGS_TABLE,
+        IndexName: "UserEmailIndex",
+        KeyConditionExpression: "userEmail = :email",
+        ExpressionAttributeValues: {
+          ":email": decodedEmail,
+        },
+      })
+    );
+
+    return corsResponse(200, { success: true, dogs: result.Items }, origin);
+  } catch (error) {
+    console.error("Error fetching dogs:", error);
+    return corsErrorResponse(500, "Failed to fetch dogs", origin);
   }
 }

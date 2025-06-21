@@ -58,6 +58,12 @@ function BookingPopup({
   const [showFieldErrors, setShowFieldErrors] = useState(false);
   const [unavailableRanges, setUnavailableRanges] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [savedDogs, setSavedDogs] = useState([]);
+
+  useEffect(() => {
+    const dogsFromStorage = JSON.parse(localStorage.getItem("userDogs")) || [];
+    setSavedDogs(dogsFromStorage);
+  }, [open]);
 
   // Fetch unavailable ranges when roomId changes
   useEffect(() => {
@@ -114,6 +120,19 @@ function BookingPopup({
     setShowFieldErrors(false);
   };
 
+  const handleSelectSavedDog = (dog, index) => {
+    setDogs((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        name: dog.name,
+        breed: dog.breed,
+        age: dog.age,
+        notes: "", // Notes are not saved
+      };
+      return updated;
+    });
+  };
+
   // Date logic
   const today = new Date().toISOString().split("T")[0];
   let endMin = startDate
@@ -159,7 +178,7 @@ function BookingPopup({
     }
     setError("");
     setShowFieldErrors(false);
-    
+
     // Find room details for pricing
     let pricePerNight = 0;
     if (rooms && rooms.length > 0 && roomId) {
@@ -168,16 +187,16 @@ function BookingPopup({
         pricePerNight = foundRoom.price || foundRoom.pricePerNight || 0;
       }
     }
-    
+
     const bookingDetails = {
       roomId: roomId, // Backend expects roomId
       startDate,
       endDate,
       dogs,
       roomTitle,
-      pricePerNight: pricePerNight
+      pricePerNight: pricePerNight,
     };
-    
+
     // Save to localStorage (merge with existing cart if present)
     let cart = {};
     try {
@@ -212,96 +231,130 @@ function BookingPopup({
         </button>
         <h2>Book Your Stay</h2>
         {loading && <p>Loading availability...</p>}
-        <div className="calendar-section">
-          <label>Choose your stay dates:</label>
-          <input
-            type="date"
-            value={startDate}
-            min={today}
-            onChange={(e) => handleStartDateChange(e.target.value)}
-            disabled={loading}
-          />
-          <span style={{ margin: "0 10px" }}>to</span>
-          <input
-            type="date"
-            value={endDate}
-            min={endMin}
-            max={endMax}
-            onChange={(e) => setEndDate(e.target.value)}
-            disabled={!startDate || loading}
-          />
-        </div>
-        <div className="dog-info-section">
-          {dogs.map((dog, i) => (
-            <div key={i} className="dog-fields">
-              <h4>Dog {i + 1}</h4>
-              <div className="dog-fields-container">
-                <div style={{ position: "relative", flex: 1 }}>
-                  <input
-                    id={`dog-name-${i}`}
-                    name={`dog-name-${i}`}
-                    value={dog.name}
-                    onChange={(e) => handleDogChange(i, "name", e.target.value)}
-                    placeholder="Name"
-                    className={
-                      showFieldErrors && !dog.name.trim() ? "input-error" : ""
-                    }
-                  />
-                  {showFieldErrors && !dog.name.trim() && (
-                    <span className="field-error-msg">Required</span>
-                  )}
-                </div>
-                <div style={{ position: "relative", flex: 1 }}>
-                  <input
-                    id={`dog-breed-${i}`}
-                    name={`dog-breed-${i}`}
-                    value={dog.breed}
-                    onChange={(e) =>
-                      handleDogChange(i, "breed", e.target.value)
-                    }
-                    placeholder="Breed"
-                    className={
-                      showFieldErrors && !dog.breed.trim() ? "input-error" : ""
-                    }
-                  />
-                  {showFieldErrors && !dog.breed.trim() && (
-                    <span className="field-error-msg">Required</span>
-                  )}
-                </div>
-                <div style={{ position: "relative", flex: 1 }}>
-                  <input
-                    id={`dog-age-${i}`}
-                    name={`dog-age-${i}`}
-                    value={dog.age}
-                    onChange={(e) => handleDogChange(i, "age", e.target.value)}
-                    placeholder="Age"
-                    type="number"
-                    min="0"
-                    className={
-                      showFieldErrors && !dog.age.trim() ? "input-error" : ""
-                    }
-                  />
-                  {showFieldErrors && !dog.age.trim() && (
-                    <span className="field-error-msg">Required</span>
-                  )}
-                </div>
+        <div className="booking-popup-content">
+          <button className="close-btn" onClick={onClose}>
+            &times;
+          </button>
+          <h2>Book: {roomTitle}</h2>
+
+          {savedDogs.length > 0 && (
+            <div className="saved-dogs-selector">
+              <h4>Your Dogs</h4>
+              <div className="saved-dogs-list">
+                {savedDogs.map((dog, dogIdx) => (
+                  <div key={dog.dogId || dogIdx} className="saved-dog-card">
+                    <img src={dog.photo} alt={dog.name} />
+                    <span>{dog.name}</span>
+                    <button
+                      onClick={() =>
+                        handleSelectSavedDog(dog, dogs.length > 1 ? dogIdx : 0)
+                      }
+                    >
+                      Select
+                    </button>
+                  </div>
+                ))}
               </div>
-              <textarea
-                id={`dog-notes-${i}`}
-                name={`dog-notes-${i}`}
-                value={dog.notes}
-                onChange={(e) => handleDogChange(i, "notes", e.target.value)}
-                placeholder="Anything we should know?"
-              />
             </div>
-          ))}
+          )}
+
+          <div className="date-selection">
+            <label>Choose your stay dates:</label>
+            <input
+              type="date"
+              value={startDate}
+              min={today}
+              onChange={(e) => handleStartDateChange(e.target.value)}
+              disabled={loading}
+            />
+            <span style={{ margin: "0 10px" }}>to</span>
+            <input
+              type="date"
+              value={endDate}
+              min={endMin}
+              max={endMax}
+              onChange={(e) => setEndDate(e.target.value)}
+              disabled={!startDate || loading}
+            />
+          </div>
+          <div className="dog-info-section">
+            {dogs.map((dog, i) => (
+              <div key={i} className="dog-fields">
+                <h4>Dog {i + 1}</h4>
+                <div className="dog-fields-container">
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      id={`dog-name-${i}`}
+                      name={`dog-name-${i}`}
+                      value={dog.name}
+                      onChange={(e) =>
+                        handleDogChange(i, "name", e.target.value)
+                      }
+                      placeholder="Name"
+                      className={
+                        showFieldErrors && !dog.name.trim() ? "input-error" : ""
+                      }
+                    />
+                    {showFieldErrors && !dog.name.trim() && (
+                      <span className="field-error-msg">Required</span>
+                    )}
+                  </div>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      id={`dog-breed-${i}`}
+                      name={`dog-breed-${i}`}
+                      value={dog.breed}
+                      onChange={(e) =>
+                        handleDogChange(i, "breed", e.target.value)
+                      }
+                      placeholder="Breed"
+                      className={
+                        showFieldErrors && !dog.breed.trim()
+                          ? "input-error"
+                          : ""
+                      }
+                    />
+                    {showFieldErrors && !dog.breed.trim() && (
+                      <span className="field-error-msg">Required</span>
+                    )}
+                  </div>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      id={`dog-age-${i}`}
+                      name={`dog-age-${i}`}
+                      value={dog.age}
+                      onChange={(e) =>
+                        handleDogChange(i, "age", e.target.value)
+                      }
+                      placeholder="Age"
+                      type="number"
+                      min="0"
+                      className={
+                        showFieldErrors && !dog.age.trim() ? "input-error" : ""
+                      }
+                    />
+                    {showFieldErrors && !dog.age.trim() && (
+                      <span className="field-error-msg">Required</span>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  id={`dog-notes-${i}`}
+                  name={`dog-notes-${i}`}
+                  value={dog.notes}
+                  onChange={(e) => handleDogChange(i, "notes", e.target.value)}
+                  placeholder="Anything we should know?"
+                />
+              </div>
+            ))}
+          </div>
+          {error && (
+            <div style={{ color: "#bb7c48", marginBottom: 10 }}>{error}</div>
+          )}
+          <button className="save-btn" onClick={handleSave} disabled={loading}>
+            Save
+          </button>
         </div>
-        {error && (
-          <div style={{ color: "#bb7c48", marginBottom: 10 }}>{error}</div>
-        )}
-        <button className="save-btn" onClick={handleSave} disabled={loading}>
-          Save
-        </button>
       </div>
     </div>
   );
