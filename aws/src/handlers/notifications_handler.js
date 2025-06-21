@@ -40,6 +40,8 @@ exports.handler = async (event, context) => {
       return await handleDailyRoomsSubscribe(event);
     } else if (path === "/notifications/daily-rooms/unsubscribe" && httpMethod === "POST") {
       return await handleDailyRoomsUnsubscribe(event);
+    } else if (path === "/notifications/test-admin" && httpMethod === "POST") {
+      return await handleTestAdminNotification(event);
     } else {
       return corsErrorResponse(404, "Endpoint not found", origin);
     }
@@ -462,4 +464,72 @@ Please review the booking in the admin dashboard.
     console.error("Failed to send admin notification:", error);
     // Don't throw error to prevent booking failure
   }
-}; 
+};
+
+async function handleTestAdminNotification(event) {
+  try {
+    const origin = extractOriginFromEvent(event);
+    
+    // Check if user is admin
+    if (!isAdmin(event)) {
+      return corsErrorResponse(403, "Admin access required", origin);
+    }
+
+    if (!ADMIN_NOTIFICATIONS_TOPIC_ARN) {
+      return corsErrorResponse(500, "Admin notifications topic not configured", origin);
+    }
+
+    const testMessage = `🧪 TEST NOTIFICATION 🧪
+
+This is a test message to verify that admin notifications are working properly.
+
+📧 Topic ARN: ${ADMIN_NOTIFICATIONS_TOPIC_ARN}
+⏰ Test Time: ${new Date().toLocaleString()}
+🔧 Test Source: Admin Dashboard
+
+If you receive this email, the notification system is working correctly!
+
+---
+Dogotel Admin Notification System Test`;
+
+    console.log("📧 Sending test admin notification...");
+    const publishResult = await snsClient.send(
+      new PublishCommand({
+        TopicArn: ADMIN_NOTIFICATIONS_TOPIC_ARN,
+        Message: testMessage,
+        Subject: "🧪 Dogotel Admin Notification Test",
+        MessageAttributes: {
+          eventType: {
+            DataType: "String",
+            StringValue: "TEST_NOTIFICATION",
+          },
+          testTime: {
+            DataType: "String",
+            StringValue: new Date().toISOString(),
+          },
+        },
+      })
+    );
+
+    console.log("✅ Test notification sent successfully!");
+    console.log("📧 SNS Message ID:", publishResult.MessageId);
+
+    return corsResponse(
+      200,
+      {
+        success: true,
+        message: "Test notification sent successfully to all subscribed admins",
+        messageId: publishResult.MessageId,
+        topicArn: ADMIN_NOTIFICATIONS_TOPIC_ARN,
+      },
+      origin
+    );
+  } catch (error) {
+    console.error("❌ Test admin notification failed:", error);
+    return corsErrorResponse(
+      500,
+      `Test notification failed: ${error.message}`,
+      extractOriginFromEvent(event)
+    );
+  }
+}

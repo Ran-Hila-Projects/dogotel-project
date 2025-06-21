@@ -544,6 +544,20 @@
               "Path": "/notifications/daily-rooms/unsubscribe",
               "Method": "options"
             }
+          },
+          "TestAdminNotification": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/test-admin",
+              "Method": "post"
+            }
+          },
+          "TestAdminNotificationOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/test-admin",
+              "Method": "options"
+            }
           }
         }
       }
