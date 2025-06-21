@@ -15,7 +15,10 @@ function Navbar({ isLoggedIn, userName, onLogout }) {
   const handleLogout = () => {
     localStorage.clear();
     if (onLogout) onLogout();
+    navigate("/");
   };
+
+  const isAdmin = userName === "admin";
 
   return (
     <nav className="navbar">
@@ -29,20 +32,28 @@ function Navbar({ isLoggedIn, userName, onLogout }) {
           <Link to="/rooms">Rooms</Link>
           <Link to="/dining">Dining</Link>
           <Link to="/services">Services</Link>
-          {userName === "admin" && <Link to="/admin">Admin</Link>}
         </div>
 
         <div className="nav-actions">
           {isLoggedIn ? (
             <>
-              <div className="user-info">
-                <Link to="/profile" className="user-avatar">
-                  {getInitials(userName)}
-                </Link>
-                <Link to="/cart" className="cart-icon">
-                  <ShoppingCart />
-                </Link>
-              </div>
+              {isAdmin ? (
+                <button
+                  className="admin-nav-btn"
+                  onClick={() => navigate("/admin")}
+                >
+                  Admin
+                </button>
+              ) : (
+                <div className="user-info">
+                  <Link to="/profile" className="user-avatar">
+                    {getInitials(userName)}
+                  </Link>
+                  <Link to="/cart" className="cart-icon">
+                    <ShoppingCart />
+                  </Link>
+                </div>
+              )}
               <button className="logout-btn" onClick={handleLogout}>
                 Log out
               </button>
