@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import "./ReviewWritingPopup.css";
+import { ReactComponent as FullStar } from "../../assets/icons/star-full.svg";
+import { ReactComponent as EmptyStar } from "../../assets/icons/star-empty.svg";
 
 function ReviewWritingPopup({ open, onClose, onSubmit }) {
   const [stars, setStars] = useState(0);
@@ -37,13 +39,13 @@ function ReviewWritingPopup({ open, onClose, onSubmit }) {
             {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
-                className={n <= stars ? "star selected" : "star"}
+                className="star"
                 onClick={() => handleStarClick(n)}
-                style={{ cursor: "pointer", fontSize: 32 }}
+                style={{ cursor: "pointer" }}
                 role="button"
                 aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
               >
-                ★
+                {n <= stars ? <FullStar /> : <EmptyStar />}
               </span>
             ))}
           </div>
@@ -55,9 +57,11 @@ function ReviewWritingPopup({ open, onClose, onSubmit }) {
             className="review-textarea"
           />
           {error && <div className="review-error">{error}</div>}
-          <button type="submit" className="submit-btn">
-            Submit Review
-          </button>
+          <div className="submit-btn-container">
+            <button type="submit" className="submit-btn">
+              Submit Review
+            </button>
+          </div>
         </form>
       </div>
     </div>

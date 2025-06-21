@@ -15,7 +15,7 @@
   background: #fff;
   border-radius: 18px;
   padding: 36px 40px 30px 40px;
-  min-width: 350px;
+  min-width: 550px;
   max-width: 95vw;
   box-shadow: 0 8px 40px rgba(60, 31, 16, 0.18);
   position: relative;
@@ -39,14 +39,21 @@
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+  justify-content: center;
 }
 
 .star {
-  color: #e0c08d;
-  transition: color 0.2s;
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
-.star.selected {
-  color: #bb7c48;
+
+.star:hover {
+  transform: scale(1.1);
+}
+
+.star svg {
+  width: 32px;
+  height: 32px;
 }
 
 .review-textarea {
@@ -74,11 +81,16 @@
   font-size: 1.1em;
   font-weight: 600;
   cursor: pointer;
-  align-self: flex-end;
   transition: background 0.2s, color 0.2s;
+  margin: auto 0;
 }
 
 .submit-btn:hover {
   background: #bb7c48;
   color: #fff;
+}
+
+.submit-btn-container {
+  display: flex;
+  justify-content: center;
 }

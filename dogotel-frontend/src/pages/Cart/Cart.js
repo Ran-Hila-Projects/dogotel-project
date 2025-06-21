@@ -70,11 +70,11 @@ function Cart() {
   const handleBookNow = async () => {
     setBookingLoading(true);
     setBookingError("");
-    
+
     try {
       // Get user email from localStorage or auth context
       let userEmail = "user@example.com"; // Default fallback
-      
+
       // Try to get email from currentUser object
       const currentUser = localStorage.getItem("currentUser");
       if (currentUser) {
@@ -85,7 +85,7 @@ function Cart() {
           console.error("Error parsing currentUser:", e);
         }
       }
-      
+
       // Fallback: try to get email from userName if it's an email format
       if (userEmail === "user@example.com") {
         const userName = localStorage.getItem("userName");
@@ -93,7 +93,7 @@ function Cart() {
           userEmail = userName;
         }
       }
-      
+
       // Prepare booking data according to backend expectations
       const bookingData = {
         userEmail: userEmail,
@@ -103,11 +103,11 @@ function Cart() {
           endDate: cart.room.endDate,
           dogs: cart.room.dogs,
           roomTitle: cart.room.roomTitle,
-          pricePerNight: cart.room.pricePerNight
+          pricePerNight: cart.room.pricePerNight,
         },
         dining: cart.dining,
         services: cart.services || [],
-        totalPrice: totalPrice
+        totalPrice: totalPrice,
       };
 
       console.log("User email resolved to:", userEmail);
@@ -115,12 +115,12 @@ function Cart() {
 
       const response = await fetch(CONFIG.API_URL + "bookings", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           // Add authorization header if available
           ...(localStorage.getItem("authToken") && {
-            "Authorization": `Bearer ${localStorage.getItem("authToken")}`
-          })
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          }),
         },
         body: JSON.stringify(bookingData),
       });
@@ -137,17 +137,17 @@ function Cart() {
       localStorage.removeItem("dogotelBooking");
       setCart({});
 
-      const dogs = cart.room && cart.room.dogs ? cart.room.dogs.map((d) => d.name) : [];
+      const dogs =
+        cart.room && cart.room.dogs ? cart.room.dogs.map((d) => d.name) : [];
       setDogNames(dogs);
       setSuccessModalOpen(true);
       setConfettiActive(true);
       setTimeout(() => setConfettiActive(false), 3500);
-      
+
       // Redirect to home page after showing success modal for 2 seconds
       setTimeout(() => {
         navigate("/");
       }, 2000);
-      
     } catch (e) {
       console.error("Booking error:", e);
       setBookingError(e.message || "Booking failed. Please try again.");
