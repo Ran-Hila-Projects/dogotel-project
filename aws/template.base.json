@@ -444,9 +444,7 @@
         "AttributeDefinitions": [
           { "AttributeName": "room_id", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "room_id", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "room_id", "KeyType": "HASH" }],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },
@@ -460,23 +458,26 @@
           { "AttributeName": "userEmail", "AttributeType": "S" },
           { "AttributeName": "room_id", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "bookingId", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "bookingId", "KeyType": "HASH" }],
         "GlobalSecondaryIndexes": [
           {
             "IndexName": "UserBookingsIndex",
-            "KeySchema": [
-              { "AttributeName": "userEmail", "KeyType": "HASH" }
-            ],
+            "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
             "Projection": { "ProjectionType": "ALL" }
           },
           {
             "IndexName": "RoomBookingsIndex",
-            "KeySchema": [
-              { "AttributeName": "room_id", "KeyType": "HASH" }
-            ],
+            "KeySchema": [{ "AttributeName": "room_id", "KeyType": "HASH" }],
             "Projection": { "ProjectionType": "ALL" }
+          },
+          {
+            "IndexName": "UserEmailIndex",
+            "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
+            "Projection": { "ProjectionType": "ALL" },
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 1,
+              "WriteCapacityUnits": 1
+            }
           }
         ],
         "BillingMode": "PAY_PER_REQUEST"
@@ -490,9 +491,7 @@
         "AttributeDefinitions": [
           { "AttributeName": "review_id", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "review_id", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "review_id", "KeyType": "HASH" }],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },
@@ -504,9 +503,7 @@
         "AttributeDefinitions": [
           { "AttributeName": "dining_id", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "dining_id", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "dining_id", "KeyType": "HASH" }],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },
@@ -518,9 +515,7 @@
         "AttributeDefinitions": [
           { "AttributeName": "service_id", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "service_id", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "service_id", "KeyType": "HASH" }],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },
@@ -532,9 +527,7 @@
         "AttributeDefinitions": [
           { "AttributeName": "email", "AttributeType": "S" }
         ],
-        "KeySchema": [
-          { "AttributeName": "email", "KeyType": "HASH" }
-        ],
+        "KeySchema": [{ "AttributeName": "email", "KeyType": "HASH" }],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },
@@ -566,4 +559,4 @@
       "Value": { "Ref": "UserPoolClient" }
     }
   }
-} 
+}
