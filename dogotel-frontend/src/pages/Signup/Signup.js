@@ -21,6 +21,8 @@ const fetchAndStoreDogs = async (userEmail) => {
   }
 };
 
+
+
 function Signup({ setIsLoggedIn, setUserName }) {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");

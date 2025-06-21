@@ -274,7 +274,9 @@
           "Variables": {
             "DYNAMODB_TABLE_BOOKINGS": { "Ref": "BookingsTable" },
             "DYNAMODB_TABLE_ROOMS": { "Ref": "RoomsTable" },
-            "BOOKING_EVENTS_QUEUE_URL": { "Ref": "BookingEventsQueue" }
+            "BOOKING_EVENTS_QUEUE_URL": { "Ref": "BookingEventsQueue" },
+            "ADMIN_NOTIFICATIONS_TOPIC_ARN": { "Ref": "AdminNotificationsTopic" },
+            "USER_NOTIFICATIONS_TOPIC_ARN": { "Ref": "UserNotificationsTopic" }
           }
         },
         "Events": {
@@ -458,6 +460,95 @@
       }
     },
 
+    "NotificationsFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-Notifications" },
+        "Handler": "notifications_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Environment": {
+          "Variables": {
+            "ADMIN_NOTIFICATIONS_TOPIC_ARN": { "Ref": "AdminNotificationsTopic" },
+            "USER_NOTIFICATIONS_TOPIC_ARN": { "Ref": "UserNotificationsTopic" },
+            "DAILY_ROOMS_TOPIC_ARN": { "Ref": "DailyRoomsNotificationsTopic" }
+          }
+        },
+        "Events": {
+          "AdminSubscribe": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/admin/subscribe",
+              "Method": "post"
+            }
+          },
+          "AdminSubscribeOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/admin/subscribe",
+              "Method": "options"
+            }
+          },
+          "AdminSubscriptionStatus": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/admin/status",
+              "Method": "get"
+            }
+          },
+          "AdminSubscriptionStatusOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/admin/status",
+              "Method": "options"
+            }
+          },
+          "UserBookingConfirmation": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/user/confirm-booking",
+              "Method": "post"
+            }
+          },
+          "UserBookingConfirmationOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/user/confirm-booking",
+              "Method": "options"
+            }
+          },
+          "DailyRoomsSubscribe": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/daily-rooms/subscribe",
+              "Method": "post"
+            }
+          },
+          "DailyRoomsSubscribeOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/daily-rooms/subscribe",
+              "Method": "options"
+            }
+          },
+          "DailyRoomsUnsubscribe": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/daily-rooms/unsubscribe",
+              "Method": "post"
+            }
+          },
+          "DailyRoomsUnsubscribeOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/notifications/daily-rooms/unsubscribe",
+              "Method": "options"
+            }
+          }
+        }
+      }
+    },
+
     "RoomsTable": {
       "Type": "AWS::DynamoDB::Table",
       "Properties": {
@@ -570,7 +661,69 @@
     },
 
     "BookingEventsQueue": { "Type": "AWS::SQS::Queue" },
-    "BookingConfirmationTopic": { "Type": "AWS::SNS::Topic" }
+    "BookingConfirmationTopic": { 
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": { "Fn::Sub": "${ProjectName}-booking-confirmations" },
+        "DisplayName": "Dogotel Booking Confirmations"
+      }
+    },
+    "AdminNotificationsTopic": { 
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": { "Fn::Sub": "${ProjectName}-admin-notifications" },
+        "DisplayName": "Dogotel Admin Notifications"
+      }
+    },
+    "UserNotificationsTopic": { 
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": { "Fn::Sub": "${ProjectName}-user-notifications" },
+        "DisplayName": "Dogotel User Notifications"
+      }
+    },
+    "DailyRoomsNotificationsTopic": { 
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": { "Fn::Sub": "${ProjectName}-daily-rooms" },
+        "DisplayName": "Dogotel Daily Room Availability"
+      }
+    },
+    "DailyRoomsQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": { "Fn::Sub": "${ProjectName}-daily-rooms-queue" },
+        "VisibilityTimeout": 60
+      }
+    },
+    "DailyRoomsFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": { "Fn::Sub": "${ProjectName}-DailyRooms" },
+        "Handler": "daily_rooms_handler.handler",
+        "Role": "arn:aws:iam::__ACCOUNT_ID__:role/LabRole",
+        "CodeUri": "src/handlers/",
+        "Timeout": 30,
+        "Environment": {
+          "Variables": {
+            "ROOMS_TABLE": { "Ref": "RoomsTable" },
+            "BOOKINGS_TABLE": { "Ref": "BookingsTable" },
+            "DAILY_ROOMS_TOPIC_ARN": { "Ref": "DailyRoomsNotificationsTopic" },
+            "DAILY_ROOMS_QUEUE_URL": { "Ref": "DailyRoomsQueue" }
+          }
+        },
+        "Events": {
+          "DailySchedule": {
+            "Type": "Schedule",
+            "Properties": {
+              "Schedule": "cron(0 8 * * ? *)",
+              "Description": "Triggers daily room notifications at 8 AM UTC",
+              "Enabled": true
+            }
+          }
+        }
+      }
+    }
   },
 
   "Outputs": {

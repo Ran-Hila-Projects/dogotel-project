@@ -21,6 +21,8 @@ const fetchAndStoreDogs = async (userEmail) => {
   }
 };
 
+
+
 function Login({ setIsLoggedIn, setUserName }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

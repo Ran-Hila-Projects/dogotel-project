@@ -1,0 +1,10 @@
+{
+  "name": "notifications-handler",
+  "version": "1.0.0",
+  "description": "Handles SNS notifications for Dogotel",
+  "main": "notifications_handler.js",
+  "dependencies": {
+    "@aws-sdk/client-sns": "^3.0.0",
+    "uuid": "^9.0.0"
+  }
+} 

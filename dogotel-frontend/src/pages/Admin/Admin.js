@@ -144,15 +144,12 @@ function AddRoomPopup({ open, onClose, onSubmit, initialData, isEdit }) {
             Image:
             {isEdit && form.image && (
               <div style={{ marginBottom: '10px' }}>
-                <p style={{ fontSize: '14px', color: '#666' }}>Current image:</p>
+                <p style={{ fontSize: '14px', color: '#666' }}>Current image for "{form.name || 'this room'}":</p>
                 <img 
                   src={form.image} 
-                  alt="Current" 
-                  style={{ width: '100px', height: '60px', objectFit: 'cover', borderRadius: '4px', marginBottom: '5px' }}
+                  alt="Current room image" 
+                  style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }}
                 />
-                <p style={{ fontSize: '12px', color: '#888', wordBreak: 'break-all' }}>
-                  {form.image}
-                </p>
               </div>
             )}
             <input
@@ -213,6 +210,9 @@ function Admin({ userName, userEmail, isAdmin }) {
   const [error, setError] = useState("");
   const [actualIsAdmin, setActualIsAdmin] = useState(false);
   const [adminCheckLoading, setAdminCheckLoading] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
 
   // Function to check if user is admin via Cognito
   const checkAdminStatus = async (email) => {
@@ -264,6 +264,61 @@ function Admin({ userName, userEmail, isAdmin }) {
     }
     
     return null;
+  };
+
+  // Check subscription status
+  const checkSubscriptionStatus = async () => {
+    const email = getCurrentUserEmail();
+    if (!email) return;
+
+    try {
+      const response = await fetch(CONFIG.API_URL + `notifications/admin/status?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer admin-token'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsSubscribed(data.subscribed);
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+    }
+  };
+
+  // Handle subscription to admin notifications
+  const handleSubscribeToNotifications = async () => {
+    const email = getCurrentUserEmail();
+    if (!email) return;
+
+    setSubscribing(true);
+    try {
+      const response = await fetch(CONFIG.API_URL + "notifications/admin/subscribe", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer admin-token'
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsSubscribed(true);
+        alert(data.message || "Successfully subscribed to booking notifications!");
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || "Failed to subscribe to notifications");
+      }
+    } catch (error) {
+      console.error('Error subscribing to notifications:', error);
+      alert("Error subscribing to notifications");
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   // Check admin status on component mount
@@ -358,6 +413,7 @@ function Admin({ userName, userEmail, isAdmin }) {
 
     if (actualIsAdmin) {
       fetchAdminData();
+      checkSubscriptionStatus();
     }
   }, [actualIsAdmin]);
 
@@ -536,7 +592,38 @@ function Admin({ userName, userEmail, isAdmin }) {
       </div>
       {tab === "bookings" && (
         <section className="admin-section">
-          <h2>Bookings</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <h2>Bookings</h2>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {isSubscribed ? (
+                <span style={{ 
+                  color: "#28a745", 
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px"
+                }}>
+                  ✅ Subscribed to notifications
+                </span>
+              ) : (
+                <button
+                  onClick={handleSubscribeToNotifications}
+                  disabled={subscribing}
+                  style={{
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    cursor: subscribing ? "not-allowed" : "pointer",
+                    fontSize: "14px"
+                  }}
+                >
+                  {subscribing ? "Subscribing..." : "📧 Subscribe to Booking Notifications"}
+                </button>
+              )}
+            </div>
+          </div>
           <table className="admin-bookings-table">
             <thead>
               <tr>

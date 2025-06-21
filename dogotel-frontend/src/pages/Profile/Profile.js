@@ -37,6 +37,8 @@ function Profile() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
+  const [dailyRoomsSubscribed, setDailyRoomsSubscribed] = useState(false);
+  const [subscribingDaily, setSubscribingDaily] = useState(false);
 
   // Function to check if user is admin
   const checkAdminStatus = async (userEmail) => {
@@ -375,6 +377,59 @@ function Profile() {
     setDogForms((forms) => [...forms, { ...emptyDogForm }]);
   };
 
+  // Daily room subscription functions
+  const handleSubscribeToDailyRooms = async () => {
+    setSubscribingDaily(true);
+    try {
+      const response = await fetch(CONFIG.API_URL + "notifications/daily-rooms/subscribe", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userData.email })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDailyRoomsSubscribed(true);
+        alert('✅ Successfully subscribed to daily room availability notifications! You will receive emails at 8 AM UTC daily.');
+      } else {
+        alert('❌ Failed to subscribe to daily notifications. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error subscribing to daily room notifications:', error);
+      alert('❌ Error subscribing to daily notifications. Please try again.');
+    } finally {
+      setSubscribingDaily(false);
+    }
+  };
+
+  const handleUnsubscribeFromDailyRooms = async () => {
+    setSubscribingDaily(true);
+    try {
+      const response = await fetch(CONFIG.API_URL + "notifications/daily-rooms/unsubscribe", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userData.email })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDailyRoomsSubscribed(false);
+        alert('✅ Successfully unsubscribed from daily room notifications.');
+      } else {
+        alert('❌ Failed to unsubscribe. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error unsubscribing from daily room notifications:', error);
+      alert('❌ Error unsubscribing. Please try again.');
+    } finally {
+      setSubscribingDaily(false);
+    }
+  };
+
   if (profileLoading) {
     return <Loader />;
   }
@@ -597,6 +652,51 @@ function Profile() {
                 </div>
               ))}
             </div>
+          </section>
+          
+          {/* Daily Room Notifications Section */}
+          <section className="notifications-section" style={{ marginTop: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
+            <h2>📧 Daily Room Notifications</h2>
+            <p style={{ color: '#666', marginBottom: '15px' }}>
+              Get notified every morning at 8 AM UTC about available rooms for the day.
+            </p>
+            {dailyRoomsSubscribed ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <span style={{ color: '#28a745', fontWeight: 'bold' }}>✅ You're subscribed to daily room notifications</span>
+                <button
+                  onClick={handleUnsubscribeFromDailyRooms}
+                  disabled={subscribingDaily}
+                  style={{
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: subscribingDaily ? 'not-allowed' : 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  {subscribingDaily ? 'Processing...' : 'Unsubscribe'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleSubscribeToDailyRooms}
+                disabled={subscribingDaily}
+                style={{
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '4px',
+                  cursor: subscribingDaily ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                {subscribingDaily ? 'Subscribing...' : '📧 Subscribe to Daily Room Updates'}
+              </button>
+            )}
           </section>
         </>
       )}

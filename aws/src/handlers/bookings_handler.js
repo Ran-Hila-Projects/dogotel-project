@@ -7,6 +7,7 @@ const {
   ScanCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const { v4: uuidv4 } = require("uuid");
 const {
   corsResponse,
@@ -20,11 +21,14 @@ const {
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
 const sqsClient = new SQSClient({});
+const snsClient = new SNSClient({});
 
 // Environment variables
 const BOOKINGS_TABLE = process.env.DYNAMODB_TABLE_BOOKINGS || "DogotelBookings";
 const ROOMS_TABLE = process.env.DYNAMODB_TABLE_ROOMS || "DogotelRooms";
 const BOOKING_EVENTS_QUEUE_URL = process.env.BOOKING_EVENTS_QUEUE_URL;
+const ADMIN_NOTIFICATIONS_TOPIC_ARN = process.env.ADMIN_NOTIFICATIONS_TOPIC_ARN;
+const USER_NOTIFICATIONS_TOPIC_ARN = process.env.USER_NOTIFICATIONS_TOPIC_ARN;
 
 exports.handler = async (event, context) => {
   console.log("Event:", JSON.stringify(event, null, 2));
@@ -171,6 +175,14 @@ async function handleCreateBooking(event) {
     } catch (sqsError) {
       console.error("SQS message sending failed:", sqsError);
       // Don't fail the booking if SQS fails
+    }
+
+    // Send SNS notifications (admin and user)
+    try {
+      await sendBookingNotifications(bookingData, roomData);
+    } catch (snsError) {
+      console.error("SNS notification sending failed:", snsError);
+      // Don't fail the booking if SNS fails
     }
 
     return corsResponse(
@@ -448,5 +460,57 @@ async function sendBookingEventToSqs(booking, room, userEmail, userName) {
   } catch (error) {
     console.error("Failed to send booking event to SQS:", error);
     throw error;
+  }
+}
+
+async function sendBookingNotifications(bookingData, roomData) {
+  console.log("Sending booking notification to subscribed admins...");
+  console.log("Admin Topic ARN:", ADMIN_NOTIFICATIONS_TOPIC_ARN);
+
+  // Only send notification to admins - no user emails after booking
+  if (ADMIN_NOTIFICATIONS_TOPIC_ARN) {
+    console.log("Sending admin notification...");
+    const adminMessage = `
+🚨 New Booking Alert! 🚨
+
+A new booking has been created:
+
+📋 Booking ID: ${bookingData.bookingId}
+👤 User: ${bookingData.userEmail}
+🏨 Room: ${roomData.title || bookingData.room?.roomTitle}
+📅 Check-in: ${bookingData.room?.startDate}
+📅 Check-out: ${bookingData.room?.endDate}
+🐕 Dogs: ${Array.isArray(bookingData.room?.dogs) ? bookingData.room.dogs.map(d => d.name || d).join(', ') : 'N/A'}
+💰 Total Price: $${bookingData.totalPrice}
+
+Time: ${new Date().toLocaleString()}
+
+Please review the booking in the admin dashboard.
+`;
+
+    try {
+      await snsClient.send(
+        new PublishCommand({
+          TopicArn: ADMIN_NOTIFICATIONS_TOPIC_ARN,
+          Message: adminMessage,
+          Subject: `New Dogotel Booking - ${bookingData.bookingId}`,
+          MessageAttributes: {
+            eventType: {
+              DataType: "String",
+              StringValue: "NEW_BOOKING",
+            },
+            bookingId: {
+              DataType: "String",
+              StringValue: bookingData.bookingId,
+            },
+          },
+        })
+      );
+      console.log("Admin notification sent successfully to all subscribed admins");
+    } catch (error) {
+      console.error("Failed to send admin notification:", error);
+    }
+  } else {
+    console.log("Admin notifications topic ARN not configured");
   }
 }
