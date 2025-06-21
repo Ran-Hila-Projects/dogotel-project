@@ -73,7 +73,26 @@ function Cart() {
     
     try {
       // Get user email from localStorage or auth context
-      const userEmail = localStorage.getItem("userEmail") || "user@example.com"; // TODO: Get from actual auth
+      let userEmail = "user@example.com"; // Default fallback
+      
+      // Try to get email from currentUser object
+      const currentUser = localStorage.getItem("currentUser");
+      if (currentUser) {
+        try {
+          const user = JSON.parse(currentUser);
+          userEmail = user.email;
+        } catch (e) {
+          console.error("Error parsing currentUser:", e);
+        }
+      }
+      
+      // Fallback: try to get email from userName if it's an email format
+      if (userEmail === "user@example.com") {
+        const userName = localStorage.getItem("userName");
+        if (userName && userName.includes("@")) {
+          userEmail = userName;
+        }
+      }
       
       // Prepare booking data according to backend expectations
       const bookingData = {
@@ -91,6 +110,7 @@ function Cart() {
         totalPrice: totalPrice
       };
 
+      console.log("User email resolved to:", userEmail);
       console.log("Submitting booking:", bookingData);
 
       const response = await fetch(CONFIG.API_URL + "bookings", {

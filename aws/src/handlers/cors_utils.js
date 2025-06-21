@@ -75,9 +75,9 @@ function isAdmin(event) {
     const headers = event.headers || {};
     const auth = headers.authorization || headers.Authorization || '';
     
-    // For now, just check for admin role in headers
+    // For development/demo purposes, accept any admin token
     // In production, decode JWT and check custom:role claim
-    return auth.includes('admin') || auth.includes('ADMIN');
+    return auth.includes('admin') || auth.includes('ADMIN') || auth.includes('Bearer admin-token');
 }
 
 module.exports = {

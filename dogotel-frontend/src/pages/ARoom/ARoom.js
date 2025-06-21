@@ -42,12 +42,42 @@ function ARoom() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const navigate = useNavigate();
-  // TODO: Replace with real user from auth context
-  const currentUser = {
-    email: "user@example.com",
-    id: "user-1",
-    name: "Hila Tsivion",
+  // Get real user from auth context
+  const getCurrentUser = () => {
+    let userEmail = "user@example.com"; // Default fallback
+    let userName = "Guest User";
+    
+    // Try to get user from currentUser object
+    const currentUser = localStorage.getItem("currentUser");
+    if (currentUser) {
+      try {
+        const user = JSON.parse(currentUser);
+        userEmail = user.email;
+        userName = user.userName || user.username || user.email.split('@')[0];
+      } catch (e) {
+        console.error("Error parsing currentUser:", e);
+      }
+    }
+    
+    // Fallback: try to get from userName if it's an email format
+    if (userEmail === "user@example.com") {
+      const storedUserName = localStorage.getItem("userName");
+      if (storedUserName && storedUserName.includes("@")) {
+        userEmail = storedUserName;
+        userName = storedUserName.split('@')[0];
+      } else if (storedUserName) {
+        userName = storedUserName;
+      }
+    }
+    
+    return {
+      email: userEmail,
+      id: userEmail,
+      name: userName,
+    };
   };
+  
+  const currentUser = getCurrentUser();
 
   // --- DUMMY LOGIC ---
   // Demo: pretend we fetch user bookings for this room

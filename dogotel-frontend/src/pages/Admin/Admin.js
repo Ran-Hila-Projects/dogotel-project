@@ -1,38 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./Admin.css";
-import roomsData from "../../data/rooms";
 import CONFIG from "../../config";
 
-// Dummy data for bookings
-const demoBookings = [
-  {
-    bookingId: "b3",
-    user: "user2@example.com",
-    room: "Deluxe Duo Den",
-    dogs: ["Max"],
-    startDate: "2025-07-10",
-    endDate: "2025-07-13",
-    createdAt: "2025-06-01T12:30:00Z",
-  },
-  {
-    bookingId: "b2",
-    user: "user1@example.com",
-    room: "The Cozy Kennel",
-    dogs: ["Rocky"],
-    startDate: "2025-06-15",
-    endDate: "2025-06-18",
-    createdAt: "2025-05-30T09:00:00Z",
-  },
-  {
-    bookingId: "b1",
-    user: "user3@example.com",
-    room: "Family Fur Cabin",
-    dogs: ["Bella", "Charlie", "Luna"],
-    startDate: "2025-06-20",
-    endDate: "2025-06-25",
-    createdAt: "2025-05-28T15:45:00Z",
-  },
-];
+// Removed dummy bookings data - now using real data from API
 
 function AddRoomPopup({ open, onClose, onSubmit, initialData, isEdit }) {
   const [form, setForm] = useState(
@@ -248,8 +218,14 @@ function Admin({ userName, userEmail, isAdmin }) {
         setLoading(true);
         setError("");
 
-        // Fetch all bookings
-        const bookingsRes = await fetch(CONFIG.API_URL + "bookings");
+        // Fetch all bookings with admin authorization
+        const bookingsRes = await fetch(CONFIG.API_URL + "bookings", {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer admin-token'
+          }
+        });
         if (bookingsRes.ok) {
           const bookingsData = await bookingsRes.json();
           console.log("Admin bookings data:", bookingsData);
@@ -265,11 +241,17 @@ function Admin({ userName, userEmail, isAdmin }) {
           }
         } else {
           console.log("Failed to fetch bookings:", bookingsRes.status, await bookingsRes.text());
-          setBookings(demoBookings); // Fallback to demo data
+          setBookings([]); // Set empty array instead of demo data
         }
 
-        // Fetch all rooms
-        const roomsRes = await fetch(CONFIG.API_URL + "rooms");
+        // Fetch all rooms with admin authorization
+        const roomsRes = await fetch(CONFIG.API_URL + "rooms", {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer admin-token'
+          }
+        });
         if (roomsRes.ok) {
           const roomsData = await roomsRes.json();
           console.log("Admin rooms data:", roomsData);
@@ -284,15 +266,15 @@ function Admin({ userName, userEmail, isAdmin }) {
           }
         } else {
           console.log("Failed to fetch rooms:", roomsRes.status);
-          setRooms(Object.values(roomsData)); // Fallback to static data
+          setRooms([]); // Set empty array instead of static data
         }
 
       } catch (err) {
         console.error("Error fetching admin data:", err);
         setError("Failed to load admin data");
-        // Fallback to demo/static data
-        setBookings(demoBookings);
-        setRooms(Object.values(roomsData));
+        // Set empty arrays when there's an error
+        setBookings([]);
+        setRooms([]);
       } finally {
         setLoading(false);
       }
@@ -325,7 +307,10 @@ function Admin({ userName, userEmail, isAdmin }) {
         // Update existing room
         const response = await fetch(CONFIG.API_URL + `rooms/${selectedRoom.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer admin-token"
+          },
           body: JSON.stringify(roomData),
         });
 
@@ -346,7 +331,10 @@ function Admin({ userName, userEmail, isAdmin }) {
         // Add new room
         const response = await fetch(CONFIG.API_URL + "rooms", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer admin-token"
+          },
           body: JSON.stringify(roomData),
         });
 
@@ -358,7 +346,9 @@ function Admin({ userName, userEmail, isAdmin }) {
         console.log("Room added successfully:", result);
 
         // Refresh rooms list
-        const roomsResponse = await fetch(CONFIG.API_URL + "rooms");
+        const roomsResponse = await fetch(CONFIG.API_URL + "rooms", {
+          headers: { "Authorization": "Bearer admin-token" }
+        });
         if (roomsResponse.ok) {
           const roomsData = await roomsResponse.json();
           setRooms(roomsData);
@@ -392,6 +382,7 @@ function Admin({ userName, userEmail, isAdmin }) {
       // Delete room from server
       const response = await fetch(CONFIG.API_URL + `rooms/${selectedRoom.id}`, {
         method: "DELETE",
+        headers: { "Authorization": "Bearer admin-token" }
       });
 
       if (!response.ok) {
@@ -557,38 +548,46 @@ function Admin({ userName, userEmail, isAdmin }) {
               </tr>
             </thead>
             <tbody>
-              {rooms.map((room) => (
-                <tr key={room.id}>
-                  <td>
-                    <img
-                      src={room.image || "https://via.placeholder.com/60"}
-                      alt={room.title || "room"}
-                      style={{ width: 60, borderRadius: 8 }}
-                    />
-                  </td>
-                  <td>{room.title}</td>
-                  <td>{room.subtitle}</td>
-                  <td>{room.description}</td>
-                  <td>{room.dogsAmount}</td>
-                  <td>${room.price}</td>
-                  <td>{room.size}</td>
-                  <td>{room.reviews?.length || 0}</td>
-                  <td>
-                    <button
-                      onClick={() => handleEditRoom(room)}
-                      className="edit-btn"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRoom(room)}
-                      className="delete-btn"
-                    >
-                      Delete
-                    </button>
+              {rooms.length === 0 ? (
+                <tr>
+                  <td colSpan="9" style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+                    No rooms found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                rooms.map((room) => (
+                  <tr key={room.id}>
+                    <td>
+                      <img
+                        src={room.image || "https://via.placeholder.com/60"}
+                        alt={room.title || "room"}
+                        style={{ width: 60, borderRadius: 8 }}
+                      />
+                    </td>
+                    <td>{room.title}</td>
+                    <td>{room.subtitle}</td>
+                    <td>{room.description}</td>
+                    <td>{room.dogsAmount}</td>
+                    <td>${room.price}</td>
+                    <td>{room.size}</td>
+                    <td>{room.reviews?.length || 0}</td>
+                    <td>
+                      <button
+                        onClick={() => handleEditRoom(room)}
+                        className="edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRoom(room)}
+                        className="delete-btn"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
           <AddRoomPopup
