@@ -211,6 +211,82 @@ function Admin({ userName, userEmail, isAdmin }) {
   const [isEdit, setIsEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actualIsAdmin, setActualIsAdmin] = useState(false);
+  const [adminCheckLoading, setAdminCheckLoading] = useState(true);
+
+  // Function to check if user is admin via Cognito
+  const checkAdminStatus = async (email) => {
+    if (!email) return false;
+    
+    try {
+      const response = await fetch(CONFIG.API_URL + `auth/check-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Admin check response:', data);
+        return data.isAdmin || false;
+      } else {
+        console.log('Admin check failed:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+  };
+
+  // Get current user email from localStorage or props
+  const getCurrentUserEmail = () => {
+    // First try userEmail prop
+    if (userEmail) return userEmail;
+    
+    // Try to get user from currentUser object
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      try {
+        const user = JSON.parse(currentUser);
+        return user.email;
+      } catch (e) {
+        console.error('Error parsing currentUser:', e);
+      }
+    }
+    
+    // Fallback: try to get from userName if it's an email format
+    const storedUserName = localStorage.getItem("userName");
+    if (storedUserName && storedUserName.includes("@")) {
+      return storedUserName;
+    }
+    
+    return null;
+  };
+
+  // Check admin status on component mount
+  useEffect(() => {
+    async function verifyAdminStatus() {
+      setAdminCheckLoading(true);
+      const email = getCurrentUserEmail();
+      console.log('Checking admin status for email:', email);
+      
+      if (email) {
+        const adminStatus = await checkAdminStatus(email);
+        console.log('Admin status result:', adminStatus);
+        setActualIsAdmin(adminStatus);
+      } else {
+        console.log('No email found, setting admin to false');
+        setActualIsAdmin(false);
+      }
+      
+      setAdminCheckLoading(false);
+    }
+
+    verifyAdminStatus();
+  }, [userEmail, userName]);
 
   useEffect(() => {
     async function fetchAdminData() {
@@ -280,10 +356,10 @@ function Admin({ userName, userEmail, isAdmin }) {
       }
     }
 
-    if (isAdmin) {
+    if (actualIsAdmin) {
       fetchAdminData();
     }
-  }, [isAdmin]);
+  }, [actualIsAdmin]);
 
   const handleAddRoom = async (room) => {
     try {
@@ -406,12 +482,22 @@ function Admin({ userName, userEmail, isAdmin }) {
     }
   };
 
-  if (!isAdmin) {
+  if (!actualIsAdmin) {
+    if (adminCheckLoading) {
+      return (
+        <div className="admin-page">
+          <h1>Admin Dashboard</h1>
+          <p>Checking admin permissions...</p>
+        </div>
+      );
+    }
+    
     return (
       <div className="admin-page">
         <h1>Admin Access Only</h1>
         <p>You do not have permission to view this page.</p>
         <p>Current user: {userEmail || userName}</p>
+        <p>Only users in the admin group can access this page.</p>
       </div>
     );
   }
