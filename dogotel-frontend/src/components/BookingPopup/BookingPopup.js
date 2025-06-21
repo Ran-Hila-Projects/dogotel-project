@@ -58,6 +58,7 @@ function BookingPopup({
   const [showFieldErrors, setShowFieldErrors] = useState(false);
   const [unavailableRanges, setUnavailableRanges] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [savedDogs, setSavedDogs] = useState([]);
 
   // Fetch unavailable ranges when roomId changes
   useEffect(() => {
@@ -65,6 +66,21 @@ function BookingPopup({
       fetchUnavailableRanges();
     }
   }, [roomId, open]);
+
+  // Load saved dogs from localStorage when popup opens
+  useEffect(() => {
+    if (open) {
+      try {
+        const storedDogs = localStorage.getItem('userDogs');
+        if (storedDogs) {
+          const parsedDogs = JSON.parse(storedDogs);
+          setSavedDogs(parsedDogs);
+        }
+      } catch (error) {
+        console.error('Error loading saved dogs:', error);
+      }
+    }
+  }, [open]);
 
   const fetchUnavailableRanges = async () => {
     try {
@@ -108,6 +124,21 @@ function BookingPopup({
     setDogs((prev) => {
       const updated = [...prev];
       updated[index][field] = value;
+      return updated;
+    });
+    setError("");
+    setShowFieldErrors(false);
+  };
+
+  const handleSelectSavedDog = (dogIndex, savedDog) => {
+    setDogs((prev) => {
+      const updated = [...prev];
+      updated[dogIndex] = {
+        name: savedDog.name,
+        breed: savedDog.breed,
+        age: savedDog.age.toString(),
+        notes: "",
+      };
       return updated;
     });
     setError("");
@@ -235,6 +266,38 @@ function BookingPopup({
           {dogs.map((dog, i) => (
             <div key={i} className="dog-fields">
               <h4>Dog {i + 1}</h4>
+              
+              {/* Saved Dogs Selection */}
+              {savedDogs.length > 0 && (
+                <div className="saved-dogs-section">
+                  <span>Or select from your saved dogs:</span>
+                  <div className="saved-dogs-buttons">
+                    {savedDogs.map((savedDog, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="saved-dog-button"
+                        onClick={() => handleSelectSavedDog(i, savedDog)}
+                      >
+                        {savedDog.photo && (
+                          <img
+                            src={savedDog.photo}
+                            alt={savedDog.name}
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "50%",
+                              objectFit: "cover"
+                            }}
+                          />
+                        )}
+                        {savedDog.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="dog-fields-container">
                 <div style={{ position: "relative", flex: 1 }}>
                   <input

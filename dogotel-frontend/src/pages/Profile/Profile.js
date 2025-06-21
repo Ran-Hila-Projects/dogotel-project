@@ -139,6 +139,22 @@ function Profile() {
           setUserData(fallbackUser);
         }
 
+        // Fetch user's dogs and save to localStorage
+        try {
+          const dogsRes = await fetch(
+            CONFIG.API_URL + `api/user/dogs?userEmail=${encodeURIComponent(decodedEmail)}`
+          );
+          if (dogsRes.ok) {
+            const dogsData = await dogsRes.json();
+            if (dogsData.success && Array.isArray(dogsData.dogs)) {
+              setDogs(dogsData.dogs);
+              localStorage.setItem('userDogs', JSON.stringify(dogsData.dogs));
+            }
+          }
+        } catch (dogsErr) {
+          console.error("Dogs fetch error:", dogsErr);
+        }
+
         // Fetch booking history only if not admin (admin will see all bookings in admin panel)
         if (!isAdmin) {
           setBookingLoading(true);
@@ -331,15 +347,20 @@ function Profile() {
       });
       const data = await res.json();
       if (data.success) {
-        setDogs((prev) => [
-          ...prev,
-          {
-            name: dogForm.name,
-            age: dogForm.age,
-            breed: dogForm.breed,
-            photo: dogForm.photo,
-          },
-        ]);
+        const newDog = {
+          dogId: data.dog.dogId,
+          name: dogForm.name,
+          age: dogForm.age,
+          breed: dogForm.breed,
+          photo: data.dog.photo, // This is now base64 data instead of S3 URL
+        };
+        
+        setDogs((prev) => [...prev, newDog]);
+        
+        // Save to localStorage for use in BookingPopup
+        const updatedDogsForStorage = [...dogs, newDog];
+        localStorage.setItem('userDogs', JSON.stringify(updatedDogsForStorage));
+        
         setDogForms((forms) => forms.filter((_, i) => i !== idx));
         if (dogForms.length === 1) setDogForms([{ ...emptyDogForm }]);
       } else {

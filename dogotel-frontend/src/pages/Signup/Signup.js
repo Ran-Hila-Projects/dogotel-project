@@ -3,6 +3,24 @@ import { useNavigate, Link } from "react-router-dom";
 import CONFIG from "../../config";
 import "./Signup.css";
 
+// Utility function to fetch and store user's dogs
+const fetchAndStoreDogs = async (userEmail) => {
+  try {
+    const dogsRes = await fetch(
+      CONFIG.API_URL + `api/user/dogs?userEmail=${encodeURIComponent(userEmail)}`
+    );
+    if (dogsRes.ok) {
+      const dogsData = await dogsRes.json();
+      if (dogsData.success && Array.isArray(dogsData.dogs)) {
+        localStorage.setItem('userDogs', JSON.stringify(dogsData.dogs));
+        console.log('User dogs saved to localStorage:', dogsData.dogs.length, 'dogs');
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user dogs:', error);
+  }
+};
+
 function Signup({ setIsLoggedIn, setUserName }) {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
@@ -50,6 +68,9 @@ function Signup({ setIsLoggedIn, setUserName }) {
           email: email,
           userName: loginData.userName || email
         }));
+        
+        // Fetch and store user's dogs
+        await fetchAndStoreDogs(email);
         
         setIsLoggedIn(true);
         setUserName(loginData.userName || email);

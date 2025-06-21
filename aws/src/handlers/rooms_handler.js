@@ -1,18 +1,15 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, GetCommand, ScanCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const { corsResponse, corsErrorResponse, handlePreflightRequest, extractOriginFromEvent, isAdmin } = require('./cors_utils');
 
 // Initialize AWS clients
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
-const s3Client = new S3Client({});
 
 // Environment variables
 const ROOMS_TABLE = process.env.DYNAMODB_TABLE_ROOMS || 'DogotelRooms';
 const BOOKINGS_TABLE = process.env.DYNAMODB_TABLE_BOOKINGS || 'DogotelBookings';
-const S3_BUCKET = process.env.S3_BUCKET || 'dogotel-images';
 
 exports.handler = async (event, context) => {
     console.log('Event:', JSON.stringify(event, null, 2));
@@ -242,6 +239,15 @@ async function handleCreateRoom(event) {
         const body = JSON.parse(event.body);
         const roomId = uuidv4();
 
+        // Validate image format if provided
+        if (body.image && body.image.startsWith("data:image/")) {
+            const matches = body.image.match(/^data:image\/([a-zA-Z]*);base64,(.*)$/);
+            if (!matches || matches.length !== 3) {
+                return corsErrorResponse(400, "Invalid image format", origin);
+            }
+            // Image is valid base64 format, store it directly
+        }
+
         const room = {
             room_id: roomId,
             title: body.title,
@@ -250,7 +256,7 @@ async function handleCreateRoom(event) {
             dogsAmount: body.dogsAmount,
             price: body.price,
             size: body.size,
-            image: body.image,
+            image: body.image, // Store image as base64 directly in DynamoDB
             included: body.included || [],
             reviews: body.reviews || [],
             is_available: body.is_available !== false,
@@ -283,6 +289,15 @@ async function handleUpdateRoom(roomId, event) {
         }
 
         const body = JSON.parse(event.body);
+
+        // Validate image format if provided
+        if (body.image && body.image.startsWith("data:image/")) {
+            const matches = body.image.match(/^data:image\/([a-zA-Z]*);base64,(.*)$/);
+            if (!matches || matches.length !== 3) {
+                return corsErrorResponse(400, "Invalid image format", origin);
+            }
+            // Image is valid base64 format, store it directly
+        }
 
         const updateExpression = [];
         const expressionAttributeValues = {};

@@ -157,8 +157,7 @@
         "Environment": {
           "Variables": {
             "DYNAMODB_TABLE_ROOMS": { "Ref": "RoomsTable" },
-            "DYNAMODB_TABLE_BOOKINGS": { "Ref": "BookingsTable" },
-            "S3_BUCKET": { "Ref": "ImagesBucket" }
+            "DYNAMODB_TABLE_BOOKINGS": { "Ref": "BookingsTable" }
           }
         },
         "Events": {
@@ -387,7 +386,8 @@
         "CodeUri": "src/handlers/",
         "Environment": {
           "Variables": {
-            "USERS_TABLE": { "Ref": "UsersTable" }
+            "USERS_TABLE": { "Ref": "UsersTable" },
+            "DOGS_TABLE": { "Ref": "DogsTable" }
           }
         },
         "Events": {
@@ -430,6 +430,27 @@
             "Type": "Api",
             "Properties": {
               "Path": "/user/profile",
+              "Method": "options"
+            }
+          },
+          "SaveDog": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/api/user/dogs",
+              "Method": "post"
+            }
+          },
+          "GetUserDogs": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/api/user/dogs",
+              "Method": "get"
+            }
+          },
+          "UserDogsOptions": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/api/user/dogs",
               "Method": "options"
             }
           }
@@ -524,6 +545,26 @@
           { "AttributeName": "email", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "email", "KeyType": "HASH" }],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+
+    "DogsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "DogotelDogs",
+        "AttributeDefinitions": [
+          { "AttributeName": "dogId", "AttributeType": "S" },
+          { "AttributeName": "userEmail", "AttributeType": "S" }
+        ],
+        "KeySchema": [{ "AttributeName": "dogId", "KeyType": "HASH" }],
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "UserEmailIndex",
+            "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
+            "Projection": { "ProjectionType": "ALL" }
+          }
+        ],
         "BillingMode": "PAY_PER_REQUEST"
       }
     },

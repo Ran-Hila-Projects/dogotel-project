@@ -3,6 +3,24 @@ import { Link } from "react-router-dom";
 import CONFIG from "../../config";
 import "./Login.css";
 
+// Utility function to fetch and store user's dogs
+const fetchAndStoreDogs = async (userEmail) => {
+  try {
+    const dogsRes = await fetch(
+      CONFIG.API_URL + `api/user/dogs?userEmail=${encodeURIComponent(userEmail)}`
+    );
+    if (dogsRes.ok) {
+      const dogsData = await dogsRes.json();
+      if (dogsData.success && Array.isArray(dogsData.dogs)) {
+        localStorage.setItem('userDogs', JSON.stringify(dogsData.dogs));
+        console.log('User dogs saved to localStorage:', dogsData.dogs.length, 'dogs');
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user dogs:', error);
+  }
+};
+
 function Login({ setIsLoggedIn, setUserName }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,6 +83,9 @@ function Login({ setIsLoggedIn, setUserName }) {
         email: email,
         userName: data.userName || email
       }));
+      
+      // Fetch and store user's dogs
+      await fetchAndStoreDogs(email);
       
       setIsLoggedIn(true);
       setUserName(data.userName || email);

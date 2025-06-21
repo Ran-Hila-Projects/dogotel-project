@@ -107,3 +107,51 @@
   bottom: -10px;
   padding-left: 3px;
 }
+
+/* Saved Dogs Section Styles */
+.saved-dogs-section {
+  background: #f8f5f2;
+  border: 1px solid #e5d8c7;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.saved-dogs-section span {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #3b1d0f;
+}
+
+.saved-dogs-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.saved-dog-button {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid #d4c4b0;
+  border-radius: 20px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.saved-dog-button:hover {
+  background: #3b1d0f;
+  color: #fff;
+  border-color: #3b1d0f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.saved-dog-button img {
+  border: 1px solid #ddd;
+}

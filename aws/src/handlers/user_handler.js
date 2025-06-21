@@ -4,6 +4,7 @@ const {
   GetCommand,
   PutCommand,
   UpdateCommand,
+  QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   CognitoIdentityProviderClient,
@@ -25,6 +26,7 @@ const cognitoClient = new CognitoIdentityProviderClient({
 
 // Environment variables
 const USERS_TABLE = process.env.USERS_TABLE || "DogotelUsers";
+const DOGS_TABLE = process.env.DOGS_TABLE || "DogotelDogs";
 const USER_POOL_ID = process.env.USER_POOL_ID;
 
 exports.handler = async (event, context) => {
@@ -52,6 +54,12 @@ exports.handler = async (event, context) => {
     } else if (path === "/user/profile" && httpMethod === "PUT") {
       // Handle PUT /user/profile for updating user profile
       return await handleUpdateUserProfile(event);
+    } else if (path === "/api/user/dogs" && httpMethod === "POST") {
+      // Handle POST /api/user/dogs for saving dog information
+      return await handleSaveDog(event);
+    } else if (path === "/api/user/dogs" && httpMethod === "GET") {
+      // Handle GET /api/user/dogs for getting user's dogs
+      return await handleGetUserDogs(event);
     } else {
       return corsErrorResponse(404, "Endpoint not found", origin);
     }
@@ -274,6 +282,107 @@ async function handleUpdateUserProfile(event) {
     );
   } catch (error) {
     console.error("Update user profile error:", error);
+    return corsErrorResponse(
+      500,
+      "Internal server error",
+      extractOriginFromEvent(event)
+    );
+  }
+}
+
+async function handleSaveDog(event) {
+  try {
+    const origin = extractOriginFromEvent(event);
+    const body = JSON.parse(event.body);
+    const { name, age, breed, photo, userEmail } = body;
+
+    if (!name || !age || !breed || !photo || !userEmail) {
+      return corsErrorResponse(400, "All fields are required", origin);
+    }
+
+    // Generate unique dog ID
+    const dogId = `dog_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Validate image format if it's base64
+    if (photo.startsWith("data:image/")) {
+      const matches = photo.match(/^data:image\/([a-zA-Z]*);base64,(.*)$/);
+      if (!matches || matches.length !== 3) {
+        return corsErrorResponse(400, "Invalid image format", origin);
+      }
+      // Image is valid base64 format, we'll store it directly
+    }
+
+    // Save dog info to DynamoDB with base64 image
+    const dogData = {
+      dogId: dogId,
+      userEmail: userEmail,
+      name: name,
+      age: parseInt(age),
+      breed: breed,
+      photo: photo, // Store base64 image directly
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    await docClient.send(
+      new PutCommand({
+        TableName: DOGS_TABLE,
+        Item: dogData,
+      })
+    );
+
+    return corsResponse(
+      200,
+      {
+        success: true,
+        message: "Dog saved successfully",
+        dog: dogData,
+      },
+      origin
+    );
+  } catch (error) {
+    console.error("Save dog error:", error);
+    return corsErrorResponse(
+      500,
+      "Internal server error",
+      extractOriginFromEvent(event)
+    );
+  }
+}
+
+async function handleGetUserDogs(event) {
+  try {
+    const origin = extractOriginFromEvent(event);
+    const userEmail = event.queryStringParameters?.userEmail;
+
+    if (!userEmail) {
+      return corsErrorResponse(400, "User email is required", origin);
+    }
+
+    const decodedEmail = decodeURIComponent(userEmail);
+
+    // Query dogs for this user
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: DOGS_TABLE,
+        IndexName: "UserEmailIndex", // We'll need to create this GSI
+        KeyConditionExpression: "userEmail = :userEmail",
+        ExpressionAttributeValues: {
+          ":userEmail": decodedEmail,
+        },
+      })
+    );
+
+    return corsResponse(
+      200,
+      {
+        success: true,
+        dogs: result.Items || [],
+      },
+      origin
+    );
+  } catch (error) {
+    console.error("Get user dogs error:", error);
     return corsErrorResponse(
       500,
       "Internal server error",
