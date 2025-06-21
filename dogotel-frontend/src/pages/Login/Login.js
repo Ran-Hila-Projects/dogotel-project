@@ -69,9 +69,24 @@ function Login({ setIsLoggedIn, setUserName }) {
         })
       );
 
+      // Fetch and store user's dogs
+      try {
+        const dogsRes = await fetch(
+          `${CONFIG.API_URL}api/user/${encodeURIComponent(email)}/dogs`
+        );
+        if (dogsRes.ok) {
+          const dogsData = await dogsRes.json();
+          if (dogsData.success && Array.isArray(dogsData.dogs)) {
+            localStorage.setItem("userDogs", JSON.stringify(dogsData.dogs));
+          }
+        }
+      } catch (dogsErr) {
+        console.error("Could not fetch user dogs on login:", dogsErr);
+        // Don't block login if dogs fail to load
+      }
+
       setIsLoggedIn(true);
       setUserName(data.userName || email);
-      await fetchAndSaveDogs(email);
       // Redirect to home page
       window.location.href = "/";
     } catch (err) {
@@ -79,20 +94,6 @@ function Login({ setIsLoggedIn, setUserName }) {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchAndSaveDogs = async (email) => {
-    try {
-      const res = await fetch(`${CONFIG.API_URL}/api/user/dogs/${email}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.dogs) {
-          localStorage.setItem("userDogs", JSON.stringify(data.dogs));
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch user dogs:", error);
     }
   };
 

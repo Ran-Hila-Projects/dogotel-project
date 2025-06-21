@@ -143,14 +143,28 @@ function AddRoomPopup({ open, onClose, onSubmit, initialData, isEdit }) {
           <label>
             Image:
             {isEdit && form.image && (
-              <div style={{ marginBottom: '10px' }}>
-                <p style={{ fontSize: '14px', color: '#666' }}>Current image:</p>
-                <img 
-                  src={form.image} 
-                  alt="Current" 
-                  style={{ width: '100px', height: '60px', objectFit: 'cover', borderRadius: '4px', marginBottom: '5px' }}
+              <div style={{ marginBottom: "10px" }}>
+                <p style={{ fontSize: "14px", color: "#666" }}>
+                  Current image:
+                </p>
+                <img
+                  src={form.image}
+                  alt="Current"
+                  style={{
+                    width: "100px",
+                    height: "60px",
+                    objectFit: "cover",
+                    borderRadius: "4px",
+                    marginBottom: "5px",
+                  }}
                 />
-                <p style={{ fontSize: '12px', color: '#888', wordBreak: 'break-all' }}>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#888",
+                    wordBreak: "break-all",
+                  }}
+                >
                   {form.image}
                 </p>
               </div>
@@ -162,7 +176,9 @@ function AddRoomPopup({ open, onClose, onSubmit, initialData, isEdit }) {
               required={!isEdit}
             />
             {isEdit && (
-              <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+              <small
+                style={{ color: "#666", display: "block", marginTop: "5px" }}
+              >
                 Leave empty to keep current image
               </small>
             )}
@@ -211,82 +227,6 @@ function Admin({ userName, userEmail, isAdmin }) {
   const [isEdit, setIsEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actualIsAdmin, setActualIsAdmin] = useState(false);
-  const [adminCheckLoading, setAdminCheckLoading] = useState(true);
-
-  // Function to check if user is admin via Cognito
-  const checkAdminStatus = async (email) => {
-    if (!email) return false;
-    
-    try {
-      const response = await fetch(CONFIG.API_URL + `auth/check-admin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: email })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Admin check response:', data);
-        return data.isAdmin || false;
-      } else {
-        console.log('Admin check failed:', response.status);
-        return false;
-      }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
-  };
-
-  // Get current user email from localStorage or props
-  const getCurrentUserEmail = () => {
-    // First try userEmail prop
-    if (userEmail) return userEmail;
-    
-    // Try to get user from currentUser object
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      try {
-        const user = JSON.parse(currentUser);
-        return user.email;
-      } catch (e) {
-        console.error('Error parsing currentUser:', e);
-      }
-    }
-    
-    // Fallback: try to get from userName if it's an email format
-    const storedUserName = localStorage.getItem("userName");
-    if (storedUserName && storedUserName.includes("@")) {
-      return storedUserName;
-    }
-    
-    return null;
-  };
-
-  // Check admin status on component mount
-  useEffect(() => {
-    async function verifyAdminStatus() {
-      setAdminCheckLoading(true);
-      const email = getCurrentUserEmail();
-      console.log('Checking admin status for email:', email);
-      
-      if (email) {
-        const adminStatus = await checkAdminStatus(email);
-        console.log('Admin status result:', adminStatus);
-        setActualIsAdmin(adminStatus);
-      } else {
-        console.log('No email found, setting admin to false');
-        setActualIsAdmin(false);
-      }
-      
-      setAdminCheckLoading(false);
-    }
-
-    verifyAdminStatus();
-  }, [userEmail, userName]);
 
   useEffect(() => {
     async function fetchAdminData() {
@@ -296,16 +236,16 @@ function Admin({ userName, userEmail, isAdmin }) {
 
         // Fetch all bookings with admin authorization
         const bookingsRes = await fetch(CONFIG.API_URL + "bookings", {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer admin-token'
-          }
+            "Content-Type": "application/json",
+            Authorization: "Bearer admin-token",
+          },
         });
         if (bookingsRes.ok) {
           const bookingsData = await bookingsRes.json();
           console.log("Admin bookings data:", bookingsData);
-          
+
           if (bookingsData.success && Array.isArray(bookingsData.bookings)) {
             setBookings(bookingsData.bookings);
           } else if (Array.isArray(bookingsData)) {
@@ -316,22 +256,26 @@ function Admin({ userName, userEmail, isAdmin }) {
             setBookings([]);
           }
         } else {
-          console.log("Failed to fetch bookings:", bookingsRes.status, await bookingsRes.text());
+          console.log(
+            "Failed to fetch bookings:",
+            bookingsRes.status,
+            await bookingsRes.text()
+          );
           setBookings([]); // Set empty array instead of demo data
         }
 
         // Fetch all rooms with admin authorization
         const roomsRes = await fetch(CONFIG.API_URL + "rooms", {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer admin-token'
-          }
+            "Content-Type": "application/json",
+            Authorization: "Bearer admin-token",
+          },
         });
         if (roomsRes.ok) {
           const roomsData = await roomsRes.json();
           console.log("Admin rooms data:", roomsData);
-          
+
           if (roomsData.success && Array.isArray(roomsData.rooms)) {
             setRooms(roomsData.rooms);
           } else if (Array.isArray(roomsData)) {
@@ -344,7 +288,6 @@ function Admin({ userName, userEmail, isAdmin }) {
           console.log("Failed to fetch rooms:", roomsRes.status);
           setRooms([]); // Set empty array instead of static data
         }
-
       } catch (err) {
         console.error("Error fetching admin data:", err);
         setError("Failed to load admin data");
@@ -356,10 +299,10 @@ function Admin({ userName, userEmail, isAdmin }) {
       }
     }
 
-    if (actualIsAdmin) {
+    if (isAdmin) {
       fetchAdminData();
     }
-  }, [actualIsAdmin]);
+  }, [isAdmin]);
 
   const handleAddRoom = async (room) => {
     try {
@@ -370,7 +313,12 @@ function Admin({ userName, userEmail, isAdmin }) {
         dogsAmount: room.capacity,
         price: room.pricePerNight,
         size: room.size,
-        included: ["Comfortable bedding", "Daily walks", "Feeding service", "24/7 supervision"],
+        included: [
+          "Comfortable bedding",
+          "Daily walks",
+          "Feeding service",
+          "24/7 supervision",
+        ],
         reviews: [],
       };
 
@@ -381,14 +329,17 @@ function Admin({ userName, userEmail, isAdmin }) {
 
       if (isEdit && selectedRoom) {
         // Update existing room
-        const response = await fetch(CONFIG.API_URL + `rooms/${selectedRoom.id}`, {
-          method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": "Bearer admin-token"
-          },
-          body: JSON.stringify(roomData),
-        });
+        const response = await fetch(
+          CONFIG.API_URL + `rooms/${selectedRoom.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer admin-token",
+            },
+            body: JSON.stringify(roomData),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to update room");
@@ -399,7 +350,9 @@ function Admin({ userName, userEmail, isAdmin }) {
 
         // Update local state
         setRooms((prev) =>
-          prev.map((r) => (r.id === selectedRoom.id ? { ...r, ...roomData } : r))
+          prev.map((r) =>
+            r.id === selectedRoom.id ? { ...r, ...roomData } : r
+          )
         );
 
         alert("✅ Room updated successfully!");
@@ -407,9 +360,9 @@ function Admin({ userName, userEmail, isAdmin }) {
         // Add new room
         const response = await fetch(CONFIG.API_URL + "rooms", {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer admin-token"
+            Authorization: "Bearer admin-token",
           },
           body: JSON.stringify(roomData),
         });
@@ -423,7 +376,7 @@ function Admin({ userName, userEmail, isAdmin }) {
 
         // Refresh rooms list
         const roomsResponse = await fetch(CONFIG.API_URL + "rooms", {
-          headers: { "Authorization": "Bearer admin-token" }
+          headers: { Authorization: "Bearer admin-token" },
         });
         if (roomsResponse.ok) {
           const roomsData = await roomsResponse.json();
@@ -438,7 +391,7 @@ function Admin({ userName, userEmail, isAdmin }) {
       setIsEdit(false);
     } catch (error) {
       console.error("Error managing room:", error);
-      alert(`❌ Failed to ${isEdit ? 'update' : 'add'} room: ${error.message}`);
+      alert(`❌ Failed to ${isEdit ? "update" : "add"} room: ${error.message}`);
     }
   };
 
@@ -456,10 +409,13 @@ function Admin({ userName, userEmail, isAdmin }) {
   const confirmDelete = async () => {
     try {
       // Delete room from server
-      const response = await fetch(CONFIG.API_URL + `rooms/${selectedRoom.id}`, {
-        method: "DELETE",
-        headers: { "Authorization": "Bearer admin-token" }
-      });
+      const response = await fetch(
+        CONFIG.API_URL + `rooms/${selectedRoom.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: "Bearer admin-token" },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete room");
@@ -470,9 +426,8 @@ function Admin({ userName, userEmail, isAdmin }) {
 
       // Update local state
       setRooms((prev) => prev.filter((r) => r.id !== selectedRoom.id));
-      
+
       alert("✅ Room deleted successfully!");
-      
     } catch (error) {
       console.error("Error deleting room:", error);
       alert(`❌ Failed to delete room: ${error.message}`);
@@ -482,22 +437,12 @@ function Admin({ userName, userEmail, isAdmin }) {
     }
   };
 
-  if (!actualIsAdmin) {
-    if (adminCheckLoading) {
-      return (
-        <div className="admin-page">
-          <h1>Admin Dashboard</h1>
-          <p>Checking admin permissions...</p>
-        </div>
-      );
-    }
-    
+  if (!isAdmin) {
     return (
       <div className="admin-page">
         <h1>Admin Access Only</h1>
         <p>You do not have permission to view this page.</p>
         <p>Current user: {userEmail || userName}</p>
-        <p>Only users in the admin group can access this page.</p>
       </div>
     );
   }
@@ -514,9 +459,19 @@ function Admin({ userName, userEmail, isAdmin }) {
   return (
     <div className="admin-page">
       <h1>Admin Dashboard</h1>
-      <p>Welcome, {userName} ({userEmail})</p>
+      <p>
+        Welcome, {userName} ({userEmail})
+      </p>
       {error && (
-        <div style={{ color: "#e74c3c", padding: "10px", backgroundColor: "#fdf2f2", borderRadius: "4px", margin: "10px 0" }}>
+        <div
+          style={{
+            color: "#e74c3c",
+            padding: "10px",
+            backgroundColor: "#fdf2f2",
+            borderRadius: "4px",
+            margin: "10px 0",
+          }}
+        >
           {error}
         </div>
       )}
@@ -553,7 +508,14 @@ function Admin({ userName, userEmail, isAdmin }) {
             <tbody>
               {bookings.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+                  <td
+                    colSpan="8"
+                    style={{
+                      textAlign: "center",
+                      padding: "20px",
+                      color: "#666",
+                    }}
+                  >
                     No bookings found
                   </td>
                 </tr>
@@ -564,36 +526,39 @@ function Admin({ userName, userEmail, isAdmin }) {
                     <td>{b.user || b.userEmail || b.email || "-"}</td>
                     <td>{b.room || b.roomName || b.roomTitle || "-"}</td>
                     <td>
-                      {Array.isArray(b.dogs) 
-                        ? b.dogs.map(d => typeof d === 'string' ? d : d.name).join(", ")
-                        : b.dogs || "-"
-                      }
+                      {Array.isArray(b.dogs)
+                        ? b.dogs
+                            .map((d) => (typeof d === "string" ? d : d.name))
+                            .join(", ")
+                        : b.dogs || "-"}
                     </td>
                     <td>
-                      {b.startDate && b.endDate 
+                      {b.startDate && b.endDate
                         ? `${b.startDate} to ${b.endDate}`
-                        : b.dates || "-"
-                      }
+                        : b.dates || "-"}
                     </td>
                     <td>${b.totalPrice || 0}</td>
                     <td>
-                      <span style={{ 
-                        padding: '2px 8px', 
-                        borderRadius: '4px', 
-                        fontSize: '12px',
-                        backgroundColor: b.status === 'confirmed' ? '#d4edda' : '#f8d7da',
-                        color: b.status === 'confirmed' ? '#155724' : '#721c24'
-                      }}>
-                        {b.status || 'unknown'}
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          backgroundColor:
+                            b.status === "confirmed" ? "#d4edda" : "#f8d7da",
+                          color:
+                            b.status === "confirmed" ? "#155724" : "#721c24",
+                        }}
+                      >
+                        {b.status || "unknown"}
                       </span>
                     </td>
                     <td>
-                      {b.createdAt 
+                      {b.createdAt
                         ? new Date(b.createdAt).toLocaleString()
-                        : b.created_at 
+                        : b.created_at
                         ? new Date(b.created_at).toLocaleString()
-                        : "-"
-                      }
+                        : "-"}
                     </td>
                   </tr>
                 ))
@@ -636,7 +601,14 @@ function Admin({ userName, userEmail, isAdmin }) {
             <tbody>
               {rooms.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+                  <td
+                    colSpan="9"
+                    style={{
+                      textAlign: "center",
+                      padding: "20px",
+                      color: "#666",
+                    }}
+                  >
                     No rooms found
                   </td>
                 </tr>

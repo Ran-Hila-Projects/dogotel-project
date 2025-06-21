@@ -54,6 +54,9 @@ function Signup({ setIsLoggedIn, setUserName }) {
           })
         );
 
+        // For new users, dog list will be empty.
+        localStorage.setItem("userDogs", JSON.stringify([]));
+
         setIsLoggedIn(true);
         setUserName(loginData.userName || email);
         // Redirect to home page
@@ -109,28 +112,10 @@ function Signup({ setIsLoggedIn, setUserName }) {
       setSuccess(true);
       // Auto-login after successful signup
       await attemptAutoLogin(email, password);
-      await fetchAndSaveDogs(email);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchAndSaveDogs = async (email) => {
-    try {
-      const res = await fetch(`${CONFIG.API_URL}/api/user/dogs/${email}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.dogs) {
-          localStorage.setItem("userDogs", JSON.stringify(data.dogs));
-        } else {
-          localStorage.setItem("userDogs", JSON.stringify([]));
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch user dogs:", error);
-      localStorage.setItem("userDogs", JSON.stringify([]));
     }
   };
 

@@ -37,6 +37,7 @@ function Profile() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
+  const [dogsLoading, setDogsLoading] = useState(false);
 
   // Function to check if user is admin
   const checkAdminStatus = async (userEmail) => {
@@ -195,7 +196,29 @@ function Profile() {
     }
 
     fetchUserProfile();
+    fetchUserDogs();
   }, []);
+
+  const fetchUserDogs = async () => {
+    setDogsLoading(true);
+    try {
+      const userEmail = getCurrentUserEmail();
+      const decodedEmail = decodeURIComponent(userEmail);
+      const res = await fetch(
+        CONFIG.API_URL + `api/user/${encodeURIComponent(decodedEmail)}/dogs`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setDogs(data.dogs);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch dogs", error);
+    } finally {
+      setDogsLoading(false);
+    }
+  };
 
   const handleProfilePhotoChange = async (e) => {
     const file = e.target.files[0];
@@ -330,16 +353,8 @@ function Profile() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setDogs((prev) => [
-          ...prev,
-          {
-            name: dogForm.name,
-            age: dogForm.age,
-            breed: dogForm.breed,
-            photo: dogForm.photo,
-          },
-        ]);
+      if (data.success && data.dog) {
+        setDogs((prev) => [...prev, data.dog]);
         setDogForms((forms) => forms.filter((_, i) => i !== idx));
         if (dogForms.length === 1) setDogForms([{ ...emptyDogForm }]);
       } else {
@@ -551,6 +566,7 @@ function Profile() {
               Add Another Dog
             </button>
             <div className="my-dogs-list">
+              {dogsLoading && <p>Loading dogs...</p>}
               {dogs.map((dog, idx) => (
                 <div key={idx} className="dog-card">
                   <img

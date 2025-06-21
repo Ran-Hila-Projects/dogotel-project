@@ -16,18 +16,17 @@ const {
   handlePreflightRequest,
   extractOriginFromEvent,
 } = require("./cors_utils");
+const { v4: uuidv4 } = require("uuid");
 
-// Initialize AWS clients
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
 });
 
-// Environment variables
 const USERS_TABLE = process.env.USERS_TABLE || "DogotelUsers";
-const USER_POOL_ID = process.env.USER_POOL_ID;
 const DOGS_TABLE = process.env.DOGS_TABLE || "DogotelDogs";
+const USER_POOL_ID = process.env.USER_POOL_ID;
 
 exports.handler = async (event, context) => {
   console.log("Event:", JSON.stringify(event, null, 2));
@@ -39,26 +38,26 @@ exports.handler = async (event, context) => {
 
     console.log(`Processing ${httpMethod} ${path} from origin: ${origin}`);
 
-    // Handle preflight OPTIONS requests
     if (httpMethod === "OPTIONS") {
       return handlePreflightRequest(event, origin);
     }
 
-    if (path.startsWith("/user/") && httpMethod === "GET") {
-      // Handle GET /user/:email for user profile
+    if (path.startsWith("/api/user/dogs") && httpMethod === "POST") {
+      return await handleAddDog(event);
+    } else if (
+      path.startsWith("/api/user/") &&
+      path.endsWith("/dogs") &&
+      httpMethod === "GET"
+    ) {
+      const email = path.split("/api/user/")[1].split("/dogs")[0];
+      return await handleGetDogs(event, email);
+    } else if (path.startsWith("/user/") && httpMethod === "GET") {
       const email = path.split("/user/")[1];
       return await handleGetUserProfile(event, email);
     } else if (path === "/user/profile-photo" && httpMethod === "POST") {
-      // Handle POST /user/profile-photo for updating profile photo
       return await handleUpdateProfilePhoto(event);
     } else if (path === "/user/profile" && httpMethod === "PUT") {
-      // Handle PUT /user/profile for updating user profile
       return await handleUpdateUserProfile(event);
-    } else if (path === "/api/user/dogs" && httpMethod === "POST") {
-      return await handleAddDog(event);
-    } else if (path.startsWith("/api/user/dogs/") && httpMethod === "GET") {
-      const email = path.split("/api/user/dogs/")[1];
-      return await handleGetDogs(event, email);
     } else {
       return corsErrorResponse(404, "Endpoint not found", origin);
     }
@@ -72,6 +71,67 @@ exports.handler = async (event, context) => {
   }
 };
 
+async function handleAddDog(event) {
+  const origin = extractOriginFromEvent(event);
+  try {
+    const body = JSON.parse(event.body);
+    const { userEmail, name, age, breed, photo } = body;
+
+    if (!userEmail || !name || !age || !breed || !photo) {
+      return corsErrorResponse(400, "Missing required dog information", origin);
+    }
+
+    const dogId = uuidv4();
+    const newDog = {
+      dogId,
+      userEmail,
+      name,
+      age,
+      breed,
+      photo,
+      createdAt: new Date().toISOString(),
+    };
+
+    await docClient.send(
+      new PutCommand({
+        TableName: DOGS_TABLE,
+        Item: newDog,
+      })
+    );
+
+    return corsResponse(201, { success: true, dog: newDog }, origin);
+  } catch (error) {
+    console.error("Add dog error:", error);
+    return corsErrorResponse(500, "Failed to add dog", origin);
+  }
+}
+
+async function handleGetDogs(event, userEmail) {
+  const origin = extractOriginFromEvent(event);
+  try {
+    const decodedEmail = decodeURIComponent(userEmail);
+    if (!decodedEmail) {
+      return corsErrorResponse(400, "User email is required", origin);
+    }
+
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: DOGS_TABLE,
+        IndexName: "UserEmailIndex",
+        KeyConditionExpression: "userEmail = :userEmail",
+        ExpressionAttributeValues: {
+          ":userEmail": decodedEmail,
+        },
+      })
+    );
+
+    return corsResponse(200, { success: true, dogs: result.Items }, origin);
+  } catch (error) {
+    console.error("Get dogs error:", error);
+    return corsErrorResponse(500, "Failed to get dogs", origin);
+  }
+}
+
 async function handleGetUserProfile(event, userEmail) {
   try {
     const origin = extractOriginFromEvent(event);
@@ -81,7 +141,6 @@ async function handleGetUserProfile(event, userEmail) {
       return corsErrorResponse(400, "User email is required", origin);
     }
 
-    // Get user from Cognito to ensure we have the latest attributes
     let cognitoUser;
     try {
       cognitoUser = await cognitoClient.send(
@@ -97,7 +156,6 @@ async function handleGetUserProfile(event, userEmail) {
       );
     }
 
-    // Get user from DynamoDB
     const dynamoResult = await docClient.send(
       new GetCommand({
         TableName: USERS_TABLE,
@@ -113,7 +171,6 @@ async function handleGetUserProfile(event, userEmail) {
       );
     }
 
-    // Merge data from Cognito and DynamoDB
     const cognitoAttributes = {};
     if (cognitoUser && cognitoUser.UserAttributes) {
       cognitoUser.UserAttributes.forEach((attr) => {
@@ -142,7 +199,6 @@ async function handleGetUserProfile(event, userEmail) {
         : dynamoData.updatedAt,
     };
 
-    // If user was in Cognito but not Dynamo, create a record for them
     if (cognitoUser && !dynamoResult.Item) {
       await docClient.send(
         new PutCommand({
@@ -189,7 +245,6 @@ async function handleUpdateProfilePhoto(event) {
       return corsErrorResponse(400, "Email and photo are required", origin);
     }
 
-    // Update user profile photo in DynamoDB using UpdateCommand to preserve other data
     const result = await docClient.send(
       new UpdateCommand({
         TableName: USERS_TABLE,
@@ -206,7 +261,6 @@ async function handleUpdateProfilePhoto(event) {
       200,
       {
         success: true,
-        message: "Profile photo updated successfully",
         photoUrl: photo,
       },
       origin
@@ -225,60 +279,38 @@ async function handleUpdateUserProfile(event) {
   try {
     const origin = extractOriginFromEvent(event);
     const body = JSON.parse(event.body);
-    const { email, username, birthdate, photo } = body;
+    const { email, ...updateData } = body;
 
     if (!email) {
       return corsErrorResponse(400, "Email is required", origin);
     }
 
-    // Build update expression dynamically
-    const updateExpressions = [];
-    const expressionAttributeValues = {
-      ":updated_at": new Date().toISOString(),
-    };
-
-    if (username) {
-      updateExpressions.push("username = :username");
-      expressionAttributeValues[":username"] = username;
+    const updateExpressionParts = [];
+    const expressionAttributeValues = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      updateExpressionParts.push(`${key} = :${key}`);
+      expressionAttributeValues[`:${key}`] = value;
     }
 
-    if (birthdate) {
-      updateExpressions.push("birthdate = :birthdate");
-      expressionAttributeValues[":birthdate"] = birthdate;
+    if (updateExpressionParts.length === 0) {
+      return corsErrorResponse(400, "No update data provided", origin);
     }
 
-    if (photo !== undefined) {
-      updateExpressions.push("photo = :photo");
-      expressionAttributeValues[":photo"] = photo;
-    }
+    const updateExpression = `SET ${updateExpressionParts.join(
+      ", "
+    )}, updated_at = :updated_at`;
+    expressionAttributeValues[":updated_at"] = new Date().toISOString();
 
-    updateExpressions.push("updated_at = :updated_at");
-
-    // Update user profile in DynamoDB
-    const result = await docClient.send(
+    await docClient.send(
       new UpdateCommand({
         TableName: USERS_TABLE,
-        Key: { email: email },
-        UpdateExpression: `SET ${updateExpressions.join(", ")}`,
+        Key: { email },
+        UpdateExpression: updateExpression,
         ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: "ALL_NEW",
       })
     );
 
-    return corsResponse(
-      200,
-      {
-        success: true,
-        message: "Profile updated successfully",
-        user: {
-          username: result.Attributes.username,
-          birthdate: result.Attributes.birthdate,
-          email: result.Attributes.email,
-          photo: result.Attributes.photo || "",
-        },
-      },
-      origin
-    );
+    return corsResponse(200, { success: true }, origin);
   } catch (error) {
     console.error("Update user profile error:", error);
     return corsErrorResponse(
@@ -286,65 +318,5 @@ async function handleUpdateUserProfile(event) {
       "Internal server error",
       extractOriginFromEvent(event)
     );
-  }
-}
-
-async function handleAddDog(event) {
-  const origin = extractOriginFromEvent(event);
-  try {
-    const body = JSON.parse(event.body);
-    const { userEmail, name, age, breed, photo } = body;
-
-    if (!userEmail || !name || !age || !breed || !photo) {
-      return corsErrorResponse(400, "Missing required dog information", origin);
-    }
-
-    const dogId = require("crypto").randomUUID();
-
-    await docClient.send(
-      new PutCommand({
-        TableName: DOGS_TABLE,
-        Item: {
-          dogId,
-          userEmail,
-          name,
-          age,
-          breed,
-          photo,
-          createdAt: new Date().toISOString(),
-        },
-      })
-    );
-
-    return corsResponse(201, { success: true, dogId }, origin);
-  } catch (error) {
-    console.error("Error adding dog:", error);
-    return corsErrorResponse(500, "Failed to add dog", origin);
-  }
-}
-
-async function handleGetDogs(event, email) {
-  const origin = extractOriginFromEvent(event);
-  try {
-    const decodedEmail = decodeURIComponent(email);
-    if (!decodedEmail) {
-      return corsErrorResponse(400, "User email is required", origin);
-    }
-
-    const result = await docClient.send(
-      new QueryCommand({
-        TableName: DOGS_TABLE,
-        IndexName: "UserEmailIndex",
-        KeyConditionExpression: "userEmail = :email",
-        ExpressionAttributeValues: {
-          ":email": decodedEmail,
-        },
-      })
-    );
-
-    return corsResponse(200, { success: true, dogs: result.Items }, origin);
-  } catch (error) {
-    console.error("Error fetching dogs:", error);
-    return corsErrorResponse(500, "Failed to fetch dogs", origin);
   }
 }

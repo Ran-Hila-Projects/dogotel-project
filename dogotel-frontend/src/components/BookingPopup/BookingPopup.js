@@ -42,7 +42,7 @@ function BookingPopup({
   roomTitle,
   onSave,
   dogsAmount = 1,
-  rooms = [], // Pass rooms if available for price lookup
+  rooms = [],
 }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -61,14 +61,13 @@ function BookingPopup({
   const [savedDogs, setSavedDogs] = useState([]);
 
   useEffect(() => {
-    const dogsFromStorage = JSON.parse(localStorage.getItem("userDogs")) || [];
-    setSavedDogs(dogsFromStorage);
-  }, [open]);
-
-  // Fetch unavailable ranges when roomId changes
-  useEffect(() => {
     if (roomId && open) {
       fetchUnavailableRanges();
+    }
+    if (open) {
+      const dogsFromStorage =
+        JSON.parse(localStorage.getItem("userDogs")) || [];
+      setSavedDogs(dogsFromStorage);
     }
   }, [roomId, open]);
 
@@ -120,20 +119,19 @@ function BookingPopup({
     setShowFieldErrors(false);
   };
 
-  const handleSelectSavedDog = (dog, index) => {
+  const handleSelectSavedDog = (dogIndex, savedDog) => {
     setDogs((prev) => {
       const updated = [...prev];
-      updated[index] = {
-        name: dog.name,
-        breed: dog.breed,
-        age: dog.age,
-        notes: "", // Notes are not saved
+      updated[dogIndex] = {
+        ...updated[dogIndex],
+        name: savedDog.name,
+        breed: savedDog.breed,
+        age: savedDog.age,
       };
       return updated;
     });
   };
 
-  // Date logic
   const today = new Date().toISOString().split("T")[0];
   let endMin = startDate
     ? new Date(new Date(startDate).getTime() + 24 * 60 * 60 * 1000)
@@ -179,7 +177,6 @@ function BookingPopup({
     setError("");
     setShowFieldErrors(false);
 
-    // Find room details for pricing
     let pricePerNight = 0;
     if (rooms && rooms.length > 0 && roomId) {
       const foundRoom = rooms.find((r) => r.id === roomId);
@@ -189,7 +186,7 @@ function BookingPopup({
     }
 
     const bookingDetails = {
-      roomId: roomId, // Backend expects roomId
+      roomId: roomId,
       startDate,
       endDate,
       dogs,
@@ -197,7 +194,6 @@ function BookingPopup({
       pricePerNight: pricePerNight,
     };
 
-    // Save to localStorage (merge with existing cart if present)
     let cart = {};
     try {
       cart = JSON.parse(localStorage.getItem("dogotelBooking")) || {};
@@ -225,136 +221,136 @@ function BookingPopup({
 
   return (
     <div className="booking-popup-overlay">
-      <div className="booking-popup">
+      <div className="booking-popup-content">
+        <h2 className="booking-popup-title">Book: {roomTitle}</h2>
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <h2>Book Your Stay</h2>
-        {loading && <p>Loading availability...</p>}
-        <div className="booking-popup-content">
-          <button className="close-btn" onClick={onClose}>
-            &times;
-          </button>
-          <h2>Book: {roomTitle}</h2>
 
-          {savedDogs.length > 0 && (
-            <div className="saved-dogs-selector">
-              <h4>Your Dogs</h4>
-              <div className="saved-dogs-list">
-                {savedDogs.map((dog, dogIdx) => (
-                  <div key={dog.dogId || dogIdx} className="saved-dog-card">
-                    <img src={dog.photo} alt={dog.name} />
-                    <span>{dog.name}</span>
-                    <button
-                      onClick={() =>
-                        handleSelectSavedDog(dog, dogs.length > 1 ? dogIdx : 0)
-                      }
-                    >
-                      Select
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="date-selection">
-            <label>Choose your stay dates:</label>
+        <div className="date-selection">
+          <div className="date-picker">
+            <label>Start Date</label>
             <input
               type="date"
               value={startDate}
               min={today}
               onChange={(e) => handleStartDateChange(e.target.value)}
-              disabled={loading}
+              className={
+                showFieldErrors && !startDate ? "field-error-shake" : ""
+              }
             />
-            <span style={{ margin: "0 10px" }}>to</span>
+          </div>
+          <div className="date-picker">
+            <label>End Date</label>
             <input
               type="date"
               value={endDate}
               min={endMin}
               max={endMax}
               onChange={(e) => setEndDate(e.target.value)}
-              disabled={!startDate || loading}
+              disabled={!startDate}
+              className={showFieldErrors && !endDate ? "field-error-shake" : ""}
             />
           </div>
-          <div className="dog-info-section">
-            {dogs.map((dog, i) => (
-              <div key={i} className="dog-fields">
-                <h4>Dog {i + 1}</h4>
-                <div className="dog-fields-container">
-                  <div style={{ position: "relative", flex: 1 }}>
-                    <input
-                      id={`dog-name-${i}`}
-                      name={`dog-name-${i}`}
-                      value={dog.name}
-                      onChange={(e) =>
-                        handleDogChange(i, "name", e.target.value)
-                      }
-                      placeholder="Name"
-                      className={
-                        showFieldErrors && !dog.name.trim() ? "input-error" : ""
-                      }
-                    />
-                    {showFieldErrors && !dog.name.trim() && (
-                      <span className="field-error-msg">Required</span>
-                    )}
-                  </div>
-                  <div style={{ position: "relative", flex: 1 }}>
-                    <input
-                      id={`dog-breed-${i}`}
-                      name={`dog-breed-${i}`}
-                      value={dog.breed}
-                      onChange={(e) =>
-                        handleDogChange(i, "breed", e.target.value)
-                      }
-                      placeholder="Breed"
-                      className={
-                        showFieldErrors && !dog.breed.trim()
-                          ? "input-error"
-                          : ""
-                      }
-                    />
-                    {showFieldErrors && !dog.breed.trim() && (
-                      <span className="field-error-msg">Required</span>
-                    )}
-                  </div>
-                  <div style={{ position: "relative", flex: 1 }}>
-                    <input
-                      id={`dog-age-${i}`}
-                      name={`dog-age-${i}`}
-                      value={dog.age}
-                      onChange={(e) =>
-                        handleDogChange(i, "age", e.target.value)
-                      }
-                      placeholder="Age"
-                      type="number"
-                      min="0"
-                      className={
-                        showFieldErrors && !dog.age.trim() ? "input-error" : ""
-                      }
-                    />
-                    {showFieldErrors && !dog.age.trim() && (
-                      <span className="field-error-msg">Required</span>
-                    )}
-                  </div>
-                </div>
-                <textarea
-                  id={`dog-notes-${i}`}
-                  name={`dog-notes-${i}`}
-                  value={dog.notes}
-                  onChange={(e) => handleDogChange(i, "notes", e.target.value)}
-                  placeholder="Anything we should know?"
-                />
-              </div>
-            ))}
-          </div>
-          {error && (
-            <div style={{ color: "#bb7c48", marginBottom: 10 }}>{error}</div>
-          )}
-          <button className="save-btn" onClick={handleSave} disabled={loading}>
-            Save
-          </button>
         </div>
+
+        <div className="dog-info-section">
+          {dogs.map((dog, index) => (
+            <div key={index} className="dog-info">
+              <h4>Dog #{index + 1}</h4>
+              {savedDogs.length > 0 && (
+                <div className="saved-dogs-selector">
+                  <label>Use a saved dog:</label>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const selectedDog = JSON.parse(e.target.value);
+                        handleSelectSavedDog(index, selectedDog);
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">Select a dog...</option>
+                    {savedDogs.map((savedDog, i) => (
+                      <option key={i} value={JSON.stringify(savedDog)}>
+                        {savedDog.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="dog-fields-container">
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    id={`dog-name-${index}`}
+                    name={`dog-name-${index}`}
+                    value={dog.name}
+                    onChange={(e) =>
+                      handleDogChange(index, "name", e.target.value)
+                    }
+                    placeholder="Name"
+                    className={
+                      showFieldErrors && !dog.name.trim()
+                        ? "field-error-shake"
+                        : ""
+                    }
+                  />
+                </div>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    id={`dog-breed-${index}`}
+                    name={`dog-breed-${index}`}
+                    value={dog.breed}
+                    onChange={(e) =>
+                      handleDogChange(index, "breed", e.target.value)
+                    }
+                    placeholder="Breed"
+                    className={
+                      showFieldErrors && !dog.breed.trim()
+                        ? "field-error-shake"
+                        : ""
+                    }
+                  />
+                </div>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    id={`dog-age-${index}`}
+                    name={`dog-age-${index}`}
+                    value={dog.age}
+                    onChange={(e) =>
+                      handleDogChange(index, "age", e.target.value)
+                    }
+                    placeholder="Age"
+                    type="number"
+                    className={
+                      showFieldErrors && !dog.age.trim()
+                        ? "field-error-shake"
+                        : ""
+                    }
+                  />
+                </div>
+              </div>
+              <textarea
+                id={`dog-notes-${index}`}
+                name={`dog-notes-${index}`}
+                value={dog.notes}
+                onChange={(e) =>
+                  handleDogChange(index, "notes", e.target.value)
+                }
+                placeholder="Anything we should know?"
+              />
+            </div>
+          ))}
+        </div>
+
+        {error && <div className="popup-error">{error}</div>}
+        <button
+          onClick={handleSave}
+          disabled={!isValid || loading}
+          className="save-booking-btn"
+        >
+          {loading ? "Checking..." : "Confirm and Add to Booking"}
+        </button>
       </div>
     </div>
   );
