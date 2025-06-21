@@ -20,11 +20,26 @@ function SearchForm({
 
   const handleSearch = (e) => {
     e.preventDefault();
+
+    // Validate that we have at least some search criteria
+    if (!checkin && !checkout && dogs === "1") {
+      // If no search criteria, just go to rooms page
+      navigate("/rooms");
+      return;
+    }
+
     if (onSearch) {
+      // If onSearch callback is provided (like in Rooms page), use it
       onSearch({ checkin, checkout, dogs });
     } else {
-      // Pass values as query params to /rooms
-      navigate(`/rooms?checkin=${checkin}&checkout=${checkout}&dogs=${dogs}`);
+      // Otherwise, navigate to rooms page with search parameters
+      const params = new URLSearchParams();
+      if (checkin) params.append("checkin", checkin);
+      if (checkout) params.append("checkout", checkout);
+      if (dogs && dogs !== "1") params.append("dogs", dogs);
+
+      const queryString = params.toString();
+      navigate(`/rooms${queryString ? `?${queryString}` : ""}`);
     }
   };
 

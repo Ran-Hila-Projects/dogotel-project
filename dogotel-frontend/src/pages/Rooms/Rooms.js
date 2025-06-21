@@ -41,24 +41,24 @@ async function checkRoomAvailability(roomId, checkin, checkout) {
       console.error("Failed to fetch unavailable ranges for room:", roomId);
       return true; // Assume available if can't check
     }
-    
+
     const data = await response.json();
     const unavailableRanges = data.unavailableRanges || [];
-    
+
     const requestStart = new Date(checkin);
     const requestEnd = new Date(checkout);
-    
+
     // Check if request dates overlap with any unavailable range
     for (const range of unavailableRanges) {
       const rangeStart = new Date(range.start);
       const rangeEnd = new Date(range.end);
-      
+
       // Check for overlap: request starts before range ends AND request ends after range starts
       if (requestStart <= rangeEnd && requestEnd >= rangeStart) {
         return false; // Room is not available
       }
     }
-    
+
     return true; // Room is available
   } catch (error) {
     console.error("Error checking room availability:", error);
@@ -96,6 +96,21 @@ function Rooms({ isLoggedIn }) {
     });
   }, []);
 
+  // Handle URL parameters on page load (for homepage search navigation)
+  useEffect(() => {
+    const urlCheckin = query.get("checkin");
+    const urlCheckout = query.get("checkout");
+    const urlDogs = query.get("dogs");
+
+    // If URL has search parameters, trigger search automatically
+    if (urlCheckin || urlCheckout || (urlDogs && urlDogs !== "1")) {
+      setCheckin(urlCheckin || "");
+      setCheckout(urlCheckout || "");
+      setDogs(urlDogs || "1");
+      setSearched(true);
+    }
+  }, [query]);
+
   useEffect(() => {
     if (searched) {
       filterRooms();
@@ -106,25 +121,27 @@ function Rooms({ isLoggedIn }) {
 
   const filterRooms = async () => {
     // First filter by dog count
-    let filtered = rooms.filter(
-      (room) => room.dogsAmount === parseInt(dogs)
-    );
-    
+    let filtered = rooms.filter((room) => room.dogsAmount === parseInt(dogs));
+
     // If dates are selected, also filter by availability
     if (checkin && checkout) {
       const availableRooms = [];
-      
+
       // Check availability for each room
       for (const room of filtered) {
-        const isAvailable = await checkRoomAvailability(room.id, checkin, checkout);
+        const isAvailable = await checkRoomAvailability(
+          room.id,
+          checkin,
+          checkout
+        );
         if (isAvailable) {
           availableRooms.push(room);
         }
       }
-      
+
       filtered = availableRooms;
     }
-    
+
     setFilteredRooms(filtered);
   };
 
@@ -202,6 +219,7 @@ function Rooms({ isLoggedIn }) {
       </section>
       {showSummary && (
         <div
+          className="summary-container"
           style={{
             display: "flex",
             alignItems: "center",
@@ -249,10 +267,9 @@ function Rooms({ isLoggedIn }) {
       <section className="rooms-list">
         {filteredRooms.length === 0 ? (
           <div style={{ color: "#bb7c48", fontSize: 22, margin: "40px auto" }}>
-            {searched && checkin && checkout 
+            {searched && checkin && checkout
               ? `No rooms available for ${dogs} dog(s) from ${checkin} to ${checkout}.`
-              : `No rooms available for ${dogs} dog(s).`
-            }
+              : `No rooms available for ${dogs} dog(s).`}
           </div>
         ) : (
           filteredRooms.map((room) => (

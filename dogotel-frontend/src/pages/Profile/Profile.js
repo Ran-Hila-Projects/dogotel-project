@@ -364,8 +364,8 @@ function Profile() {
         const updatedDogsForStorage = [...dogs, newDog];
         localStorage.setItem("userDogs", JSON.stringify(updatedDogsForStorage));
 
-        setDogForms((forms) => forms.filter((_, i) => i !== idx));
-        if (dogForms.length === 1) setDogForms([{ ...emptyDogForm }]);
+        // Reset the form to allow adding another dog
+        setDogForms([{ ...emptyDogForm }]);
       } else {
         updateDogForm(idx, { error: data.error || "Failed to save dog" });
       }
@@ -649,13 +649,6 @@ function Profile() {
                 </div>
               </form>
             ))}
-
-            <button
-              className="add-another-dog-btn"
-              onClick={handleAddAnotherDog}
-            >
-              + Add Another Dog
-            </button>
 
             {dogs.length > 0 && (
               <div className="my-dogs-list">
