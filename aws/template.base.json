@@ -571,7 +571,10 @@
           { "AttributeName": "room_id", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "room_id", "KeyType": "HASH" }],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -587,22 +590,28 @@
         "KeySchema": [{ "AttributeName": "bookingId", "KeyType": "HASH" }],
         "GlobalSecondaryIndexes": [
           {
-            "IndexName": "UserBookingsIndex",
+            "IndexName": "UserEmailIndex",
             "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
-            "Projection": { "ProjectionType": "ALL" }
+            "Projection": { "ProjectionType": "ALL" },
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
           },
           {
             "IndexName": "RoomBookingsIndex",
             "KeySchema": [{ "AttributeName": "room_id", "KeyType": "HASH" }],
-            "Projection": { "ProjectionType": "ALL" }
-          },
-          {
-            "IndexName": "UserEmailIndex",
-            "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
-            "Projection": { "ProjectionType": "ALL" }
+            "Projection": { "ProjectionType": "ALL" },
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
           }
         ],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -614,7 +623,10 @@
           { "AttributeName": "review_id", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "review_id", "KeyType": "HASH" }],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -626,7 +638,10 @@
           { "AttributeName": "dining_id", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "dining_id", "KeyType": "HASH" }],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -638,7 +653,10 @@
           { "AttributeName": "service_id", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "service_id", "KeyType": "HASH" }],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -650,7 +668,10 @@
           { "AttributeName": "email", "AttributeType": "S" }
         ],
         "KeySchema": [{ "AttributeName": "email", "KeyType": "HASH" }],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
@@ -667,10 +688,17 @@
           {
             "IndexName": "UserEmailIndex",
             "KeySchema": [{ "AttributeName": "userEmail", "KeyType": "HASH" }],
-            "Projection": { "ProjectionType": "ALL" }
+            "Projection": { "ProjectionType": "ALL" },
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
           }
         ],
-        "BillingMode": "PAY_PER_REQUEST"
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
       }
     },
 
